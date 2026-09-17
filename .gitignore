@@ -5,7 +5,9 @@ dist/
 .astro/
 
 # dependencies
-node_modules/
+# The trailing wildcard also covers backup copies such as node_modules.bak,
+# which are easy to leave behind after a clean-install test.
+node_modules*/
 
 # logs
 npm-debug.log*
