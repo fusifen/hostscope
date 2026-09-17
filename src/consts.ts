@@ -345,3 +345,38 @@ export const EDITORS = {
 } as const;
 
 export type EditorKey = keyof typeof EDITORS;
+
+/** The shape callers can rely on, whether the editor is registered or not. */
+export interface EditorRecord {
+  readonly name: string;
+  readonly role: string;
+  readonly bio: string;
+  readonly avatar: string;
+}
+
+/**
+ * Resolve an author key — the slug stored in frontmatter, e.g. `maya-ross` —
+ * into the editor record used for bylines and for Person structured data.
+ *
+ * Always render through this. The key is a *slug*, so using it directly
+ * produces `"name": "maya-ross"` in JSON-LD and `By maya ross` in a byline.
+ * Both look broken to a reader, and a slug is not a usable author signal for
+ * the E-E-A-T assessment Google applies to review content.
+ *
+ * An unknown key falls back to a title-cased version of itself — `jane-doe`
+ * becomes `Jane Doe` — rather than to a registered editor, so a new
+ * contributor is never silently misattributed to somebody else.
+ */
+export function resolveEditor(key: string): EditorRecord {
+  const known = EDITORS[key as EditorKey];
+  if (known) return known;
+
+  const name =
+    key
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ') || key;
+
+  return { name, role: 'Contributor', bio: '', avatar: '' };
+}

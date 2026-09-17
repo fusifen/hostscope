@@ -9,7 +9,7 @@ import TableOfContents from '../../components/TableOfContents.astro';
 import ArticleCTA from '../../components/ArticleCTA.astro';
 import AffiliateDisclosure from '../../components/AffiliateDisclosure.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
-import { SITE } from '../../consts';
+import { SITE, resolveEditor } from '../../consts';
 import { breadcrumbSchema, faqSchema, graph, organizationSchema } from '../../lib/seo';
 
 export async function getStaticPaths() {
@@ -43,9 +43,13 @@ const schema = graph([
     headline: data.title,
     description: data.description,
     url,
+    // Google recommends an image for Article rich results. Reuse the
+    // build-time OG card the page already generates for social sharing —
+    // the naming convention is guaranteed by src/pages/og/.
+    image: [`${SITE.url}/og/compare-${comparison.id}.png`],
     datePublished: data.pubDate.toISOString(),
     dateModified: (data.updatedDate ?? data.pubDate).toISOString(),
-    author: { '@type': 'Person', name: data.author.replace('-', ' ') },
+    author: { '@type': 'Person', name: resolveEditor(data.author).name },
     publisher: { '@id': `${SITE.url}/#organization` },
     articleSection: 'Comparisons',
     inLanguage: 'en-US',
@@ -79,7 +83,7 @@ const schema = graph([
         </h1>
         <p class="mt-4 text-[1.0625rem] leading-relaxed text-ink-600">{data.description}</p>
         <div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[0.8125rem] text-ink-500">
-          <span>By <strong class="font-semibold text-ink-700">{data.author.replace('-', ' ')}</strong></span>
+          <span>By <strong class="font-semibold text-ink-700">{resolveEditor(data.author).name}</strong></span>
           <span>
             Updated
             <time datetime={(data.updatedDate ?? data.pubDate).toISOString()}>

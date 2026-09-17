@@ -10,7 +10,7 @@ import PlanCard from '../../components/PlanCard.astro';
 import AffiliateButton from '../../components/AffiliateButton.astro';
 import AffiliateDisclosure from '../../components/AffiliateDisclosure.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
-import { SITE } from '../../consts';
+import { SITE, resolveEditor } from '../../consts';
 import {
   breadcrumbSchema,
   faqSchema,
@@ -96,7 +96,7 @@ const schema = graph([
     itemUrl: url,
     reviewBody: verdictText,
     ratingValue: data.rating,
-    authorName: data.author.replace('-', ' '),
+    authorName: resolveEditor(data.author).name,
     datePublished: data.publishedDate,
   }),
   ...(data.faqs.length ? [faqSchema(data.faqs)] : []),

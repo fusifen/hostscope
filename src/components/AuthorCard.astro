@@ -1,5 +1,5 @@
 ---
-import { EDITORS, type EditorKey } from '../consts';
+import { resolveEditor } from '../consts';
 
 export interface Props {
   author: string;
@@ -11,7 +11,9 @@ export interface Props {
 }
 
 const { author, detailed = false, updated, class: className = '' } = Astro.props;
-const editor = EDITORS[author as EditorKey] ?? EDITORS['maya-ross'];
+// Resolve rather than defaulting to a specific editor: silently crediting an
+// unrecognised author to a real person is worse than showing a generic name.
+const editor = resolveEditor(author);
 
 const initials = editor.name
   .split(' ')

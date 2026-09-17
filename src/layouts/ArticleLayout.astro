@@ -8,7 +8,7 @@ import AffiliateDisclosure from '../components/AffiliateDisclosure.astro';
 import ArticleCTA from '../components/ArticleCTA.astro';
 import FAQ from '../components/FAQ.astro';
 import ArticleCard from '../components/ArticleCard.astro';
-import { CATEGORIES, SITE } from '../consts';
+import { CATEGORIES, SITE, resolveEditor } from '../consts';
 import { formatDate } from '../lib/pricing';
 import { articleSchema, breadcrumbSchema, faqSchema, howToSchema, graph } from '../lib/seo';
 
@@ -47,7 +47,7 @@ const schemaNodes: object[] = [
     image: heroImage,
     datePublished: data.pubDate,
     dateModified: data.updatedDate,
-    authorName: data.author,
+    authorName: resolveEditor(data.author).name,
     section: category?.label ?? data.category,
     keywords: data.tags,
     wordCount,
@@ -117,7 +117,7 @@ const showToc = headings.filter((h) => h.depth === 2 || h.depth === 3).length >=
               <circle cx="8" cy="5.5" r="2.8"></circle>
               <path d="M2.8 14c.6-2.6 2.7-4 5.2-4s4.6 1.4 5.2 4" stroke-linecap="round"></path>
             </svg>
-            By <strong class="font-semibold text-ink-700">{data.author.replace('-', ' ')}</strong>
+            By <strong class="font-semibold text-ink-700">{resolveEditor(data.author).name}</strong>
           </span>
           <span class="flex items-center gap-1.5">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3.5 w-3.5" aria-hidden="true">

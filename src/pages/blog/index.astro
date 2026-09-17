@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import ArticleListing from '../../components/ArticleListing.astro';
-import { SITE, CATEGORY_LIST } from '../../consts';
+import { SITE, CATEGORY_LIST, resolveEditor } from '../../consts';
 import { breadcrumbSchema, graph, organizationSchema } from '../../lib/seo';
 
 const PAGE_SIZE = 9;
@@ -30,11 +30,19 @@ const schema = graph([
       'Every Hostinger review, buying guide, tutorial, deal and troubleshooting article we have published.',
     url: `${SITE.url}/blog/`,
     isPartOf: { '@id': `${SITE.url}/#website` },
+    // Each entry is emitted as a standalone Article, so it has to satisfy the
+    // same rich-result requirements as the article pages themselves —
+    // headline, image, datePublished, author and publisher. A headline-and-URL
+    // stub is not a valid Article node.
     hasPart: allArticles.slice(0, 20).map((a) => ({
       '@type': 'Article',
       headline: a.data.title,
       url: `${SITE.url}/blog/${a.id}/`,
+      image: [`${SITE.url}/og/blog-${a.id}.png`],
       datePublished: a.data.pubDate.toISOString(),
+      dateModified: (a.data.updatedDate ?? a.data.pubDate).toISOString(),
+      author: { '@type': 'Person', name: resolveEditor(a.data.author).name },
+      publisher: { '@id': `${SITE.url}/#organization` },
     })),
   },
 ]);
