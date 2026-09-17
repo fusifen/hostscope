@@ -14,6 +14,8 @@
  *   4. `engines` in package.json is satisfiable by the pinned version.
  *   5. Deploy-blocking placeholders are gone (site URL, CMS repo).
  *   6. Nothing required at build time is gitignored.
+ *   7. SEO/deploy essentials: robots.txt does not block the site's own CSS/JS,
+ *      and Cloudflare Pages response headers are present.
  *
  *   node scripts/check-deploy-readiness.mjs
  */
@@ -177,6 +179,47 @@ if (!gitignore.includes('dist')) {
 }
 if (!gitignore.includes('node_modules')) {
   warnings.push('.gitignore does not exclude node_modules/.');
+}
+
+/* ------------------------------------------------------------------ *
+ * 6. SEO / deploy essentials
+ * ------------------------------------------------------------------ */
+
+// Blocking the asset directory in robots.txt stops Googlebot from fetching the
+// CSS and JS it needs to render the page, which suppresses rendering-based
+// indexing and Core Web Vitals assessment. It is an easy mistake to make and
+// completely invisible in the browser, so it is worth a guard.
+const robotsSource = existsSync(resolve(ROOT, 'src/pages/robots.txt.ts'))
+  ? read('src/pages/robots.txt.ts')
+  : null;
+
+if (robotsSource) {
+  const activeRules = robotsSource
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\/\*|\*)/.test(line))
+    .join('\n');
+
+  for (const assetPath of ['/_astro/', '/_astro']) {
+    const blocking = new RegExp(`^\\s*Disallow:\\s*${assetPath.replace(/[/]/g, '\\/')}\\s*$`, 'm');
+    if (blocking.test(activeRules)) {
+      errors.push(
+        `robots.txt disallows ${assetPath}, which holds the site's hashed CSS and JS bundles. ` +
+          'Googlebot must be able to fetch these to render pages. Remove the Disallow rule.',
+      );
+    }
+  }
+}
+
+if (!existsSync(resolve(ROOT, 'public/_headers'))) {
+  warnings.push(
+    'public/_headers is missing. Cloudflare Pages applies it automatically, and without it ' +
+      'you get no security headers and no immutable caching for hashed /_astro/ assets.',
+  );
+} else {
+  const headers = read('public/_headers');
+  if (!/_astro\/\*/.test(headers)) {
+    warnings.push('public/_headers has no /_astro/* rule — hashed assets will not be cached immutably.');
+  }
 }
 
 /* ------------------------------------------------------------------ *

@@ -1,0 +1,51 @@
+# =============================================================================
+#  Cloudflare Pages response headers
+# =============================================================================
+#  Cloudflare Pages reads this file from the build output root and applies the
+#  rules below. It has no effect when previewing locally — see:
+#  https://developers.cloudflare.com/pages/configuration/headers/
+#
+#  Rule order does not matter; the most specific matching pattern wins.
+#
+#  NOTE: no Content-Security-Policy is set here on purpose. Astro inlines small
+#  stylesheets and emits inline scripts for the interactive tools, so a CSP has
+#  to be built from the actual emitted output and tested against every page.
+#  Shipping a guessed policy would silently break the site.
+# =============================================================================
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Astro emits content-hashed filenames here, so a cached copy can never go
+# stale — a content change produces a new filename. Safe to cache forever.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Self-hosted images and build-time OG cards change rarely.
+/images/*
+  Cache-Control: public, max-age=604800
+
+/og/*
+  Cache-Control: public, max-age=604800
+
+# The CMS shell must never be served from cache, or an editor can be left
+# running an old build of the admin UI after an update.
+/admin/*
+  Cache-Control: no-cache, must-revalidate
+
+# The sitemap and feed are regenerated on every deploy.
+/sitemap-index.xml
+  Cache-Control: public, max-age=3600
+
+/sitemap-0.xml
+  Cache-Control: public, max-age=3600
+
+/rss.xml
+  Cache-Control: public, max-age=3600
+
+/robots.txt
+  Cache-Control: public, max-age=3600

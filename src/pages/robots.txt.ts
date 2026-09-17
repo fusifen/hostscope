@@ -8,13 +8,16 @@ export const GET: APIRoute = () => {
 User-agent: *
 Allow: /
 
-# The CMS admin panel is for our editors only
+# The CMS admin panel is for our editors only. The panel also carries
+# <meta name="robots" content="noindex, nofollow">, so this is belt and braces.
 Disallow: /admin/
 Disallow: /admin
 
-# Build artefacts and internal endpoints
-Disallow: /_astro/
-Disallow: /api/
+# NOTE: /_astro/ is deliberately NOT disallowed.
+# It holds the site's content-hashed CSS and JavaScript bundles. Googlebot
+# must be able to fetch them to render the page; blocking them makes the site
+# look unstyled and scriptless to crawlers, which harms rendering-based
+# indexing and Core Web Vitals assessment.
 
 # Be explicit about the AI crawlers — we are happy to be cited,
 # but we do not license full-text reproduction. See /terms/
@@ -29,10 +32,6 @@ Allow: /
 
 User-agent: Google-Extended
 Allow: /
-
-# Hostinger's own affiliate tracking redirects must never be indexed
-User-agent: *
-Disallow: /go/
 
 Sitemap: ${SITE.url}/sitemap-index.xml
 `;
