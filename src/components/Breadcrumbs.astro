@@ -1,0 +1,55 @@
+---
+import type { BreadcrumbEntry } from '../lib/seo';
+
+export interface Props {
+  items: BreadcrumbEntry[];
+  light?: boolean;
+  class?: string;
+}
+
+const { items, light = false, class: className = '' } = Astro.props;
+---
+
+<nav aria-label="Breadcrumb" class={`text-[0.75rem] ${className}`}>
+  <ol class="flex flex-wrap items-center gap-1.5">
+    {
+      items.map((item, i) => {
+        const isLast = i === items.length - 1;
+        return (
+          <li class="flex items-center gap-1.5">
+            {isLast ? (
+              <span
+                aria-current="page"
+                class:list={['font-semibold', light ? 'text-white/90' : 'text-ink-700']}
+              >
+                {item.name}
+              </span>
+            ) : (
+              <>
+                <a
+                  href={item.href}
+                  class:list={[
+                    'transition',
+                    light ? 'text-white/60 hover:text-white' : 'text-ink-400 hover:text-brand-700',
+                  ]}
+                >
+                  {item.name}
+                </a>
+                <svg
+                  class:list={['h-3 w-3', light ? 'text-white/30' : 'text-ink-300']}
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  aria-hidden="true"
+                >
+                  <path d="m4.5 2.5 3.5 3.5-3.5 3.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </>
+            )}
+          </li>
+        );
+      })
+    }
+  </ol>
+</nav>

@@ -1,0 +1,193 @@
+---
+import { affiliateUrl } from '../consts';
+
+export interface Row {
+  label: string;
+  hostinger: string;
+  competitor: string;
+  edge: 'hostinger' | 'competitor' | 'tie';
+}
+
+export interface Props {
+  competitor: string;
+  rows: Row[];
+  /** 1 highlights the Hostinger column, 2 the competitor column. */
+  highlightColumn?: number;
+  placement?: string;
+  class?: string;
+}
+
+const {
+  competitor,
+  rows,
+  highlightColumn = 1,
+  placement = 'comparison-table',
+  class: className = '',
+} = Astro.props;
+
+const href = affiliateUrl({ placement, campaign: `vs-${competitor.toLowerCase().replace(/\s+/g, '-')}` });
+
+const edgeCount = {
+  hostinger: rows.filter((r) => r.edge === 'hostinger').length,
+  competitor: rows.filter((r) => r.edge === 'competitor').length,
+  tie: rows.filter((r) => r.edge === 'tie').length,
+};
+---
+
+<div class={className}>
+  <!-- Score summary -->
+  <div class="grid grid-cols-3 gap-3">
+    <div class="rounded-xl border border-brand-200 bg-brand-50 p-3 text-center">
+      <p class="text-xl font-extrabold text-brand-800">{edgeCount.hostinger}</p>
+      <p class="mt-0.5 text-[0.6875rem] font-semibold text-brand-700">Hostinger wins</p>
+    </div>
+    <div class="rounded-xl border border-line bg-white p-3 text-center">
+      <p class="text-xl font-extrabold text-ink-700">{edgeCount.tie}</p>
+      <p class="mt-0.5 text-[0.6875rem] font-semibold text-ink-500">Too close to call</p>
+    </div>
+    <div class="rounded-xl border border-line bg-white p-3 text-center">
+      <p class="text-xl font-extrabold text-ink-700">{edgeCount.competitor}</p>
+      <p class="mt-0.5 text-[0.6875rem] font-semibold text-ink-500">{competitor} wins</p>
+    </div>
+  </div>
+
+  <!-- Head to head -->
+  <div class="mt-5 scroll-x rounded-2xl border border-line bg-white">
+    <table class="w-full min-w-[40rem] border-collapse text-[0.875rem]">
+      <caption class="sr-only">
+        Feature-by-feature comparison between Hostinger and {competitor}
+      </caption>
+      <thead>
+        <tr>
+          <th
+            scope="col"
+            class="sticky left-0 z-10 w-[30%] border-b border-line bg-ink-50 px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase"
+          >
+            Comparison point
+          </th>
+          <th
+            scope="col"
+            class:list={[
+              'border-b px-4 py-3.5 text-left',
+              highlightColumn === 1
+                ? 'border-brand-200 bg-brand-50'
+                : 'border-line bg-ink-50',
+            ]}
+          >
+            <span class="flex items-center gap-2 text-[0.9375rem] font-extrabold text-ink-950">
+              Hostinger
+              {highlightColumn === 1 && <span class="pill pill-brand">Our pick</span>}
+            </span>
+          </th>
+          <th
+            scope="col"
+            class:list={[
+              'border-b px-4 py-3.5 text-left',
+              highlightColumn === 2
+                ? 'border-brand-200 bg-brand-50'
+                : 'border-line bg-ink-50',
+            ]}
+          >
+            <span class="flex items-center gap-2 text-[0.9375rem] font-extrabold text-ink-950">
+              {competitor}
+              {highlightColumn === 2 && <span class="pill pill-brand">Our pick</span>}
+            </span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rows.map((row, i) => (
+            <tr class:list={['border-b border-line last:border-0', i % 2 === 1 && 'bg-ink-50/40']}>
+              <th
+                scope="row"
+                class:list={[
+                  'sticky left-0 z-10 px-4 py-3 text-left text-[0.8125rem] font-semibold text-ink-700',
+                  i % 2 === 1 ? 'bg-[#f7f8fc]' : 'bg-white',
+                ]}
+              >
+                {row.label}
+              </th>
+              <td
+                class:list={[
+                  'px-4 py-3 align-top text-ink-700',
+                  highlightColumn === 1 && 'bg-brand-50/40',
+                ]}
+              >
+                <span class="flex items-start">
+                  <span>{row.hostinger}</span>
+                  {
+                    row.edge === 'hostinger' && (
+                      <span
+                        class="ml-1.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-mint-500 align-middle"
+                        title="Better on this row"
+                      >
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="3"
+                          class="h-2 w-2 text-white"
+                          aria-hidden="true"
+                        >
+                          <path d="m3.5 8.5 3 3 6-7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="sr-only">Better on this row</span>
+                      </span>
+                    )
+                  }
+                </span>
+              </td>
+              <td
+                class:list={[
+                  'px-4 py-3 align-top text-ink-700',
+                  highlightColumn === 2 && 'bg-brand-50/40',
+                ]}
+              >
+                <span class="flex items-start">
+                  <span>{row.competitor}</span>
+                  {
+                    row.edge === 'competitor' && (
+                      <span
+                        class="ml-1.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-mint-500 align-middle"
+                        title="Better on this row"
+                      >
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="3"
+                          class="h-2 w-2 text-white"
+                          aria-hidden="true"
+                        >
+                          <path d="m3.5 8.5 3 3 6-7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="sr-only">Better on this row</span>
+                      </span>
+                    )
+                  }
+                </span>
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4 flex flex-col items-center justify-between gap-3 rounded-xl border border-line bg-ink-50 p-4 sm:flex-row">
+    <p class="text-[0.8125rem] text-ink-600">
+      Winner on {edgeCount.hostinger} of {rows.length} comparison points.
+    </p>
+    <a
+      href={href}
+      target="_blank"
+      rel="sponsored nofollow noopener"
+      data-affiliate="true"
+      data-placement={placement}
+      class="btn btn-primary btn-md shrink-0"
+    >
+      Check Hostinger's current price
+    </a>
+  </div>
+</div>

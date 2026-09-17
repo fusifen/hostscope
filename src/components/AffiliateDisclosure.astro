@@ -1,0 +1,52 @@
+---
+/**
+ * AffiliateDisclosure — rendered at the top of every monetised article.
+ * Required by the FTC (US), the ASA (UK) and Google's site-reputation
+ * guidelines, and it genuinely improves trust and click-through.
+ */
+import { AFFILIATE } from '../consts';
+
+export interface Props {
+  /** 'banner' = full card at the top of an article. 'inline' = one-liner. */
+  variant?: 'banner' | 'inline';
+  class?: string;
+}
+
+const { variant = 'banner', class: className = '' } = Astro.props;
+---
+
+{
+  variant === 'inline' ? (
+    <p class={`text-[0.75rem] leading-relaxed text-ink-500 ${className}`}>
+      <strong class="font-semibold text-ink-700">Disclosure:</strong> this page contains affiliate
+      links. If you buy through them we may earn a commission at no extra cost to you.
+    </p>
+  ) : (
+    <aside
+      class={`flex items-start gap-3 rounded-xl border border-sun-200 bg-sun-50 p-4 ${className}`}
+      aria-label="Affiliate disclosure"
+    >
+      <span
+        class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sun-400/25 text-sun-700"
+        aria-hidden="true"
+      >
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">
+          <path d="M10 2.5 3 6v4c0 4 3 6.6 7 7.5 4-.9 7-3.5 7-7.5V6l-7-3.5Z" stroke-linejoin="round"></path>
+          <path d="M10 8v3.2M10 13.4h.01" stroke-linecap="round"></path>
+        </svg>
+      </span>
+      <div class="text-[0.8125rem] leading-relaxed text-sun-700">
+        <p class="font-bold">Affiliate disclosure</p>
+        <p class="mt-1">
+          {`HostScope is reader-supported. Some links on this page are affiliate links (ID ${AFFILIATE.affId}) — if you buy through one we may earn a commission at no extra cost to you. That commission never changes what we recommend, and we publish the renewal prices and limitations most review sites leave out.`}
+        </p>
+        <a
+          href="/affiliate-disclosure/"
+          class="mt-1.5 inline-block font-semibold underline decoration-sun-400 underline-offset-2 hover:decoration-sun-600"
+        >
+          How we make money
+        </a>
+      </div>
+    </aside>
+  )
+}

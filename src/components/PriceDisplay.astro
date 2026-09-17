@@ -1,0 +1,82 @@
+---
+/**
+ * PriceDisplay — the price block used on plan cards, the pricing matrix and
+ * plan detail heroes. Always shows the promo price, the crossed-out regular
+ * price, the discount percentage and the renewal rate, because hiding the
+ * renewal price is the thing readers complain about most on hosting sites.
+ */
+import { discountPercent, perMonth, termTotal } from '../lib/pricing';
+
+export interface Props {
+  promoMonthly: number;
+  regularMonthly: number;
+  renewalMonthly: number;
+  termMonths: number;
+  termLabel: string;
+  size?: 'sm' | 'md' | 'lg';
+  /** Show "billed as $X upfront" line. */
+  showTotal?: boolean;
+  showRenewal?: boolean;
+  class?: string;
+}
+
+const {
+  promoMonthly,
+  regularMonthly,
+  renewalMonthly,
+  termMonths,
+  termLabel,
+  size = 'md',
+  showTotal = true,
+  showRenewal = true,
+  class: className = '',
+} = Astro.props;
+
+const off = discountPercent(regularMonthly, promoMonthly);
+const total = termTotal(promoMonthly, termMonths);
+const priceSize = { sm: 'text-2xl', md: 'text-[2rem]', lg: 'text-[2.75rem]' }[size];
+const centsSize = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' }[size];
+---
+
+<div class={className}>
+  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+    <span class={`${priceSize} font-extrabold tracking-[-0.03em] text-ink-950`}>
+      ${promoMonthly.toFixed(2)}
+    </span>
+    <span class={`${centsSize} font-semibold text-ink-500`}>/mo</span>
+    {
+      regularMonthly > promoMonthly && (
+        <span class="text-[0.8125rem] font-medium text-ink-400 line-through">
+          ${regularMonthly.toFixed(2)}
+        </span>
+      )
+    }
+  </div>
+
+  <div class="mt-1.5 flex flex-wrap items-center gap-2">
+    {
+      off > 0 && (
+        <span class="pill pill-mint !normal-case !tracking-normal">
+          Save {off}%
+        </span>
+      )
+    }
+    <span class="text-[0.6875rem] font-medium text-ink-500">{termLabel} term</span>
+  </div>
+
+  {
+    showTotal && (
+      <p class="mt-2 text-[0.75rem] leading-snug text-ink-500">
+        Billed as <strong class="font-semibold text-ink-700">${total.toFixed(2)}</strong> upfront
+      </p>
+    )
+  }
+
+  {
+    showRenewal && (
+      <p class="mt-1 text-[0.75rem] leading-snug text-ink-500">
+        Renews at <strong class="font-semibold text-ink-700">{perMonth(renewalMonthly)}/mo</strong>
+      </p>
+    )
+  }
+</div>

@@ -1,0 +1,66 @@
+---
+export interface Props {
+  value: number;
+  /** Number of reviews, shown next to the score. */
+  count?: number;
+  size?: 'sm' | 'md' | 'lg';
+  showValue?: boolean;
+  class?: string;
+}
+
+const { value, count, size = 'md', showValue = true, class: className = '' } = Astro.props;
+
+const px = { sm: 12, md: 15, lg: 19 }[size];
+const textSize = { sm: 'text-[0.75rem]', md: 'text-[0.8125rem]', lg: 'text-[0.9375rem]' }[size];
+
+// Build 5 stars, each with a fractional fill via a clip rect
+const stars = [0, 1, 2, 3, 4].map((i) => {
+  const fill = Math.max(0, Math.min(1, value - i));
+  return { index: i, fill };
+});
+---
+
+<div class={`flex items-center gap-2 ${className}`}>
+  <span
+    class="flex items-center gap-0.5"
+    role="img"
+    aria-label={`Rated ${value.toFixed(1)} out of 5`}
+  >
+    {
+      stars.map((star) => (
+        <svg
+          width={px}
+          height={px}
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+          class="shrink-0"
+        >
+          <defs>
+            <clipPath id={`hs-star-${Math.round(value * 10)}-${star.index}`}>
+              <rect x="0" y="0" width={20 * star.fill} height="20" />
+            </clipPath>
+          </defs>
+          <path
+            d="M10 1.6l2.47 5.01 5.53.8-4 3.9.94 5.5L10 14.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8L10 1.6Z"
+            fill="#E6E9F2"
+          />
+          <path
+            d="M10 1.6l2.47 5.01 5.53.8-4 3.9.94 5.5L10 14.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8L10 1.6Z"
+            fill="#F59E0B"
+            clip-path={`url(#hs-star-${Math.round(value * 10)}-${star.index})`}
+          />
+        </svg>
+      ))
+    }
+  </span>
+  {
+    showValue && (
+      <span class={`${textSize} font-bold text-ink-900`}>
+        {value.toFixed(1)}
+        {count !== undefined && (
+          <span class="ml-1 font-medium text-ink-400">({count.toLocaleString('en-US')})</span>
+        )}
+      </span>
+    )
+  }
+</div>

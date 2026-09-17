@@ -1,0 +1,306 @@
+---
+/**
+ * CostCalculator — works out what a Hostinger plan really costs over time.
+ *
+ * Hosting sites advertise the intro rate and quietly omit the renewal rate.
+ * This tool multiplies the intro rate by the intro term, then the renewal rate
+ * by the remaining months, and shows the blended monthly cost. Every number
+ * comes from the same content collection that powers the pricing matrix.
+ */
+import type { CollectionEntry } from 'astro:content';
+import { affiliateUrl } from '../consts';
+
+export interface Props {
+  plans: CollectionEntry<'plans'>[];
+  class?: string;
+}
+
+const { plans, class: className = '' } = Astro.props;
+
+const payload = plans
+  .map((plan) => ({
+    slug: plan.id,
+    name: plan.data.name,
+    group: plan.data.group,
+    promo: plan.data.pricing.promoMonthly,
+    regular: plan.data.pricing.regularMonthly,
+    renewal: plan.data.pricing.renewalMonthly,
+    termMonths: plan.data.pricing.termMonths,
+    termLabel: plan.data.pricing.termLabel,
+  }))
+  .sort((a, b) => a.promo - b.promo);
+
+// Default selection: the three most useful comparison points
+const defaults = ['premium', 'unlimited', 'cloud-startup'].filter((slug) =>
+  payload.some((p) => p.slug === slug),
+);
+---
+
+<div class={className} data-cost-calculator>
+  <script type="application/json" data-cost-payload set:html={JSON.stringify(payload)} />
+
+  <div class="grid gap-6 lg:grid-cols-[22rem_1fr]">
+    <!-- ── Controls ─────────────────────────────────────────────────── -->
+    <div class="space-y-5">
+      <fieldset class="border-0 p-0">
+        <legend class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+          Plans to compare
+        </legend>
+        <div class="mt-2.5 space-y-1.5" data-cost-plans>
+          {
+            payload.map((plan) => (
+              <label
+                class="flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5 transition hover:border-brand-300 has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50"
+                data-cost-plan-label={plan.slug}
+              >
+                <input
+                  type="checkbox"
+                  value={plan.slug}
+                  checked={defaults.includes(plan.slug)}
+                  class="h-4 w-4 shrink-0 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+                  data-cost-plan-input
+                />
+                <span class="min-w-0 flex-1">
+                  <span class="block text-[0.8125rem] font-semibold text-ink-900">{plan.name}</span>
+                  <span class="block text-[0.6875rem] text-ink-500">
+                    ${plan.promo.toFixed(2)}/mo intro · {plan.termLabel}
+                  </span>
+                </span>
+              </label>
+            ))
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="border-0 p-0">
+        <legend class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+          How long will you keep it?
+        </legend>
+        <div class="mt-2.5 grid grid-cols-4 gap-1.5" role="group">
+          {
+            [
+              { months: 12, label: '1 yr' },
+              { months: 24, label: '2 yrs' },
+              { months: 48, label: '4 yrs' },
+              { months: 72, label: '6 yrs' },
+            ].map((option, i) => (
+              <button
+                type="button"
+                data-cost-horizon={option.months}
+                aria-pressed={option.months === 48 ? 'true' : 'false'}
+                class:list={[
+                  'rounded-xl border px-2 py-2.5 text-[0.8125rem] font-bold transition',
+                  option.months === 48
+                    ? 'border-brand-400 bg-brand-600 text-white'
+                    : 'border-line bg-white text-ink-600 hover:border-brand-300 hover:text-ink-900',
+                ]}
+              >
+                {option.label}
+              </button>
+            ))
+          }
+        </div>
+        <p class="mt-2 text-[0.6875rem] leading-relaxed text-ink-500">
+          After the intro term ends, Hostinger bills the renewal rate. This calculator assumes you
+          stay on the same plan and never renegotiate — the worst realistic case.
+        </p>
+      </fieldset>
+
+      <div class="rounded-xl border border-sun-200 bg-sun-50 p-3.5">
+        <p class="text-[0.75rem] leading-relaxed text-sun-700">
+          <strong class="font-bold">Why this matters:</strong> Premium looks like $2.99/mo, but over
+          four years you actually pay the intro rate for 48 months and then the renewal rate. Over
+          six years, renewal is what you mostly pay.
+        </p>
+      </div>
+    </div>
+
+    <!-- ── Results ──────────────────────────────────────────────────── -->
+    <div>
+      <div class="rounded-2xl border border-line bg-white p-5">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 class="text-[0.9375rem] font-bold text-ink-900">
+              True cost over <span data-cost-horizon-label>4 years</span>
+            </h3>
+            <p class="mt-1 text-[0.75rem] text-ink-500">
+              Intro rate for the first term, renewal rate after that.
+            </p>
+          </div>
+          <p class="text-[0.75rem] font-semibold text-ink-500" data-cost-cheapest-note></p>
+        </div>
+
+        <div class="mt-5 space-y-4" data-cost-results>
+          <p class="text-[0.8125rem] text-ink-500">Select at least one plan to see the numbers.</p>
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4 sm:flex-row">
+        <p class="text-[0.8125rem] text-ink-600">
+          Ready to lock in the intro rate before it changes?
+        </p>
+        <a
+          href={affiliateUrl({ placement: 'tool-result', campaign: 'cost-calculator' })}
+          target="_blank"
+          rel="sponsored nofollow noopener"
+          data-affiliate="true"
+          data-placement="tool-result"
+          class="btn btn-primary btn-md shrink-0"
+        >
+          See current pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+
+  type PlanPayload = {
+    slug: string;
+    name: string;
+    group: string;
+    promo: number;
+    regular: number;
+    renewal: number;
+    termMonths: number;
+    termLabel: string;
+  };
+
+  const root = document.querySelector<HTMLElement>('[data-cost-calculator]');
+  if (root) {
+    const payloadEl = root.querySelector<HTMLScriptElement>('[data-cost-payload]');
+    const PLANS: PlanPayload[] = payloadEl?.textContent ? JSON.parse(payloadEl.textContent) : [];
+
+    const inputs = Array.from(root.querySelectorAll<HTMLInputElement>('[data-cost-plan-input]'));
+    const horizonButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('[data-cost-horizon]'),
+    );
+    const resultsEl = root.querySelector<HTMLElement>('[data-cost-results]');
+    const horizonLabel = root.querySelector<HTMLElement>('[data-cost-horizon-label]');
+    const cheapestNote = root.querySelector<HTMLElement>('[data-cost-cheapest-note]');
+
+    let horizonMonths = 48;
+    const reduceMotion =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+    function money(value: number) {
+      return `$${value.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
+
+    function compute(plan: PlanPayload) {
+      const introMonths = Math.min(horizonMonths, plan.termMonths);
+      const renewalMonths = Math.max(0, horizonMonths - plan.termMonths);
+      const introCost = plan.promo * introMonths;
+      const renewalCost = plan.renewal * renewalMonths;
+      const total = introCost + renewalCost;
+      const blended = total / horizonMonths;
+      return { plan, introMonths, renewalMonths, introCost, renewalCost, total, blended };
+    }
+
+    function render() {
+      const selected = inputs
+        .filter((input) => input.checked)
+        .map((input) => PLANS.find((p) => p.slug === input.value))
+        .filter((p): p is PlanPayload => Boolean(p));
+
+      if (!selected.length) {
+        if (resultsEl) {
+          resultsEl.innerHTML =
+            '<p class="text-[0.8125rem] text-ink-500">Select at least one plan to see the numbers.</p>';
+        }
+        if (cheapestNote) cheapestNote.textContent = '';
+        return;
+      }
+
+      const rows = selected.map(compute).sort((a, b) => a.total - b.total);
+      const max = Math.max(...rows.map((r) => r.total));
+      const cheapest = rows[0];
+
+      if (cheapestNote) {
+        cheapestNote.textContent = `Lowest total: ${cheapest.plan.name}`;
+      }
+
+      if (resultsEl) {
+        resultsEl.innerHTML = rows
+          .map((row) => {
+            const pct = max > 0 ? Math.round((row.total / max) * 100) : 0;
+            const isCheapest = row.plan.slug === cheapest.plan.slug;
+            const renewalShare =
+              row.total > 0 ? Math.round((row.renewalCost / row.total) * 100) : 0;
+            return `
+            <div data-cost-row="${row.plan.slug}">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <p class="flex items-center gap-2 text-[0.875rem] font-bold text-ink-900">
+                  ${row.plan.name}
+                  ${isCheapest ? '<span class="pill pill-mint !normal-case !tracking-normal">Lowest total</span>' : ''}
+                </p>
+                <p class="text-[1.0625rem] font-extrabold tracking-[-0.02em] text-ink-950">
+                  ${money(row.total)}
+                </p>
+              </div>
+
+              <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-ink-100">
+                <div class="h-full rounded-full ${isCheapest ? 'bg-gradient-to-r from-mint-500 to-mint-700' : 'bg-gradient-to-r from-brand-400 to-brand-600'}"
+                     style="width:${pct}%"></div>
+              </div>
+
+              <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.75rem] text-ink-500">
+                <span>Blended <strong class="font-semibold text-ink-800">${money(row.blended)}/mo</strong></span>
+                <span>Intro term <strong class="font-semibold text-ink-800">${money(row.introCost)}</strong> (${row.introMonths} mo @ $${row.plan.promo.toFixed(2)})</span>
+                ${
+                  row.renewalMonths > 0
+                    ? `<span>Renewal <strong class="font-semibold text-ink-800">${money(row.renewalCost)}</strong> (${row.renewalMonths} mo @ $${row.plan.renewal.toFixed(2)})</span>`
+                    : '<span class="text-mint-700 font-medium">No renewal period in this window</span>'
+                }
+              </div>
+
+              ${
+                renewalShare > 0
+                  ? `<p class="mt-1.5 text-[0.6875rem] text-ink-400">${renewalShare}% of this total is paid at the renewal rate.</p>`
+                  : ''
+              }
+            </div>`;
+          })
+          .join('');
+      }
+
+      if (!reduceMotion) {
+        gsap.fromTo(
+          '[data-cost-row]',
+          { autoAlpha: 0, y: 12 },
+          { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.07, ease: 'power2.out', clearProps: 'transform' },
+        );
+      }
+    }
+
+    inputs.forEach((input) => input.addEventListener('change', render));
+
+    horizonButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        horizonMonths = Number(btn.dataset.costHorizon ?? '48');
+        horizonButtons.forEach((other) => {
+          const active = other === btn;
+          other.setAttribute('aria-pressed', String(active));
+          other.classList.toggle('border-brand-400', active);
+          other.classList.toggle('bg-brand-600', active);
+          other.classList.toggle('text-white', active);
+          other.classList.toggle('border-line', !active);
+          other.classList.toggle('bg-white', !active);
+          other.classList.toggle('text-ink-600', !active);
+        });
+        if (horizonLabel) {
+          const years = horizonMonths / 12;
+          horizonLabel.textContent = `${years} ${years === 1 ? 'year' : 'years'}`;
+        }
+        render();
+      });
+    });
+
+    render();
+  }
+</script>

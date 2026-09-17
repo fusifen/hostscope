@@ -1,0 +1,119 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE, AFFILIATE } from '../consts';
+import { breadcrumbSchema, graph, organizationSchema } from '../lib/seo';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Affiliate disclosure', href: '/affiliate-disclosure/' },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'WebPage',
+    name: 'Affiliate disclosure',
+    url: `${SITE.url}/affiliate-disclosure/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+]);
+---
+
+<PageLayout
+  title="Affiliate Disclosure"
+  description="How HostScope makes money, which links are affiliate links, and what that does and does not change about our recommendations."
+  eyebrow="Disclosure"
+  canonical={`${SITE.url}/affiliate-disclosure/`}
+  breadcrumbs={breadcrumbs}
+  schema={schema}
+  updated={new Date('2026-09-10')}
+>
+  <p class="lead text-[1.125rem] text-ink-700">
+    Short version: some links on this site are affiliate links. If you buy hosting through one,
+    Hostinger pays us a commission. You pay exactly the same price you would have paid otherwise.
+  </p>
+
+  <h2 id="what-is-affiliate">What an affiliate link is</h2>
+
+  <p>
+    An affiliate link is a normal link to a merchant's website with a tracking identifier attached.
+    When you click it and then buy something, the merchant knows the sale came from us and pays a
+    referral fee. It is the same mechanism as a discount code in a magazine, except the reader's price
+    is unchanged and the publisher is paid by the merchant.
+  </p>
+
+  <p>
+    Our affiliate identifier with Hostinger is <strong>{AFFILIATE.affId}</strong>. Every outbound
+    Hostinger link on this site carries it and is marked with <code>rel="sponsored"</code>, which is
+    the standard machine-readable signal for an affiliate link.
+  </p>
+
+  <h2 id="what-it-costs-you">What it costs you</h2>
+
+  <p>
+    Nothing. The commission comes out of Hostinger's margin, not out of your payment. If you visit
+    hostinger.com directly and buy the same plan, you pay the same amount. There is no "reader
+    discount" that we are withholding, and no cheaper price available by avoiding our links.
+  </p>
+
+  <p>
+    We do not accept payment for reviews, scores or placements, and we do not run sponsored content.
+    If that ever changes, it will be labelled on the page itself.
+  </p>
+
+  <h2 id="how-it-affects-editorial">How it affects our editorial decisions</h2>
+
+  <p>
+    It does not, and here is how you can check that rather than take our word for it:
+  </p>
+
+  <ul>
+    <li>
+      <strong>We recommend cheaper plans.</strong> Premium at $2.99/mo is our recommendation for first
+      sites, even though Unlimited at $3.99/mo would earn us more.
+    </li>
+    <li>
+      <strong>We tell people not to buy.</strong> Every plan review has a "don't buy this if…" section,
+      and our <a href="/compare/">comparison pages</a> award rows to competitors.
+    </li>
+    <li>
+      <strong>We publish the renewal price.</strong> If we were optimising for commission we would
+      quote the introductory rate and say nothing about the increase. Every pricing table on this site
+      includes both.
+    </li>
+    <li>
+      <strong>We publish the limits.</strong> Weekly-only backups on Premium, no Node.js on the cheapest
+      tier, the 100-site technical cap on cloud plans marketed as unlimited. These are the details an
+      affiliate site optimising for conversion would omit.
+    </li>
+  </ul>
+
+  <h2 id="where-links-appear">Where affiliate links appear</h2>
+
+  <p>
+    Affiliate links appear on the home page, the pricing matrix, plan review pages, comparison pages,
+    the deals page, in article call-to-action blocks, and in the floating offer bar. Articles carry a
+    disclosure at the top. Pages that contain affiliate links are marked as such in the page source.
+  </p>
+
+  <p>
+    Links to Hostinger's own help documentation, to third-party review platforms, and to other
+    hosting companies are <strong>not</strong> affiliate links and earn us nothing.
+  </p>
+
+  <h2 id="other-revenue">Other revenue</h2>
+
+  <p>
+    Currently there is none. HostScope is funded entirely by the Hostinger affiliate programme. We do
+    not run display advertising, we do not sell a newsletter sponsorship, and we do not sell reader
+    data.
+  </p>
+
+  <h2 id="questions">Questions</h2>
+
+  <p>
+    If anything here is unclear, or you want to know whether a specific link is monetised, email{' '}
+    <a href={`mailto:${SITE.publisher.email}`}>{SITE.publisher.email}</a>.
+  </p>
+</PageLayout>

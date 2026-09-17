@@ -1,0 +1,200 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { affiliateUrl } from '../consts';
+import { discountPercent, perMonth, termTotal } from '../lib/pricing';
+import RatingStars from './RatingStars.astro';
+
+export interface Props {
+  plan: CollectionEntry<'plans'>;
+  /** 'full' = pricing matrix card, 'mini' = compact pick card. */
+  variant?: 'full' | 'mini';
+  /** Show the spec grid inside the card. */
+  showSpecs?: boolean;
+  placement?: string;
+  class?: string;
+  /** Highlight as the editorial top pick. */
+  recommended?: boolean;
+}
+
+const {
+  plan,
+  variant = 'full',
+  showSpecs = true,
+  placement = 'plan-card',
+  class: className = '',
+  recommended = false,
+} = Astro.props;
+
+const { data } = plan;
+const slug = plan.id;
+const href = affiliateUrl({ placement, plan: slug, campaign: data.group });
+const off = discountPercent(data.pricing.regularMonthly, data.pricing.promoMonthly);
+const total = termTotal(data.pricing.promoMonthly, data.pricing.termMonths);
+
+const featured = recommended || data.featured;
+
+const specRows = [
+  { label: 'Websites', value: data.specs.websites },
+  { label: 'CPU', value: `${data.specs.cpuCores} core${data.specs.cpuCores === '1' ? '' : 's'}` },
+  { label: 'RAM', value: data.specs.ram },
+  { label: 'Storage', value: `${data.specs.storage} ${data.specs.storageType}` },
+  { label: 'Bandwidth', value: data.specs.bandwidth },
+  { label: 'Mailboxes', value: data.specs.mailboxes },
+];
+---
+
+{
+  variant === 'mini' ? (
+    <a
+      href={`/plans/${slug}/`}
+      class={`card card-hover group flex flex-col p-4 ${className}`}
+    >
+      <div class="flex items-start justify-between gap-2">
+        <h3 class="text-[0.9375rem] font-bold text-ink-950">{data.name}</h3>
+        {data.badge && <span class="pill pill-brand">{data.badge}</span>}
+      </div>
+      <p class="mt-1.5 line-clamp-2 flex-1 text-[0.8125rem] leading-snug text-ink-500">
+        {data.tagline}
+      </p>
+      <p class="mt-3 flex items-baseline gap-1">
+        <span class="text-xl font-extrabold text-ink-950">
+          ${data.pricing.promoMonthly.toFixed(2)}
+        </span>
+        <span class="text-[0.75rem] font-medium text-ink-500">/mo</span>
+      </p>
+      <span class="mt-1 text-[0.6875rem] text-ink-400">{data.pricing.termLabel} term</span>
+    </a>
+  ) : (
+    <div
+      class:list={[
+        'relative flex flex-col rounded-2xl border bg-white p-5 transition',
+        featured
+          ? 'border-brand-300 shadow-[0_0_0_1px_var(--color-brand-200),var(--shadow-lift)] lg:-mt-3 lg:mb-3'
+          : 'border-line shadow-[var(--shadow-card)] hover:border-brand-200',
+        className,
+      ]}
+      data-reveal
+      data-plan-card={slug}
+      data-intro-price={data.pricing.promoMonthly}
+      data-renewal-price={data.pricing.renewalMonthly}
+    >
+      {featured && (
+        <div class="absolute -top-3 left-5 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-800 px-3 py-1 text-[0.625rem] font-bold tracking-[0.06em] text-white uppercase shadow-md">
+          <svg viewBox="0 0 16 16" fill="currentColor" class="h-3 w-3" aria-hidden="true">
+            <path d="M8 1l2 4.2 4.6.6-3.4 3.2.9 4.5L8 11.4 3.9 13.5l.9-4.5L1.4 5.8 6 5.2 8 1Z" />
+          </svg>
+          {data.badge ?? 'Top pick'}
+        </div>
+      )}
+
+      {!featured && data.badge && (
+        <div class="absolute -top-3 left-5">
+          <span class="pill pill-sun shadow-sm">{data.badge}</span>
+        </div>
+      )}
+
+      <header class={featured ? 'mt-2' : ''}>
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="text-lg font-extrabold tracking-[-0.02em] text-ink-950">{data.name}</h3>
+            <p class="mt-1.5 text-[0.8125rem] leading-snug text-ink-500">{data.tagline}</p>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <RatingStars value={data.rating} size="sm" showValue />
+        </div>
+      </header>
+
+      <!-- Price block — swapped by the matrix toggle -->
+      <div class="mt-5 rounded-xl border border-line bg-ink-50/70 p-4">
+        <div class="flex items-baseline gap-1.5">
+          <span
+            class="text-[2rem] font-extrabold leading-none tracking-[-0.035em] text-ink-950"
+            data-price-display
+          >
+            ${data.pricing.promoMonthly.toFixed(2)}
+          </span>
+          <span class="text-sm font-semibold text-ink-500">/mo</span>
+          <span
+            class="ml-1 text-[0.8125rem] font-medium text-ink-400 line-through"
+            data-price-strike
+          >
+            ${data.pricing.regularMonthly.toFixed(2)}
+          </span>
+        </div>
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+          <span class="pill pill-mint !normal-case !tracking-normal" data-price-savings>
+            Save {off}%
+          </span>
+          <span class="text-[0.6875rem] font-medium text-ink-500" data-price-term>
+            {data.pricing.termLabel} term
+          </span>
+        </div>
+        <p class="mt-2 text-[0.75rem] leading-snug text-ink-500">
+          Billed as <strong class="font-semibold text-ink-700">${total.toFixed(2)}</strong> upfront
+          · renews at
+          <strong class="font-semibold text-ink-700">{perMonth(data.pricing.renewalMonthly)}/mo</strong>
+        </p>
+      </div>
+
+      {showSpecs && (
+        <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-2.5">
+          {specRows.map((row) => (
+            <div class="min-w-0">
+              <dt class="text-[0.625rem] font-bold tracking-[0.06em] text-ink-400 uppercase">
+                {row.label}
+              </dt>
+              <dd class="truncate text-[0.8125rem] font-semibold text-ink-800" title={row.value}>
+                {row.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {data.highlights.length > 0 && (
+        <ul class="mt-4 space-y-2 border-t border-line pt-4">
+          {data.highlights.slice(0, 5).map((item) => (
+            <li class="flex gap-2.5 text-[0.8125rem] leading-snug text-ink-600">
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                class="mt-1 h-3 w-3 shrink-0 text-mint-600"
+                aria-hidden="true"
+              >
+                <path d="m3.5 8.5 3 3 6-7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div class="mt-5 flex flex-1 flex-col justify-end gap-2">
+        <a
+          href={href}
+          target="_blank"
+          rel="sponsored nofollow noopener"
+          data-affiliate="true"
+          data-placement={placement}
+          data-plan={slug}
+          class:list={['btn btn-lg w-full', featured ? 'btn-primary' : 'btn-outline']}
+        >
+          Claim deal
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4 opacity-80" aria-hidden="true">
+            <path d="M7 4h9v9M16 4 6.5 13.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+        <a
+          href={`/plans/${slug}/`}
+          class="text-center text-[0.75rem] font-semibold text-ink-500 transition hover:text-brand-700"
+        >
+          Read the full {data.shortName ?? data.name} review
+        </a>
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,162 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../consts';
+import { breadcrumbSchema, graph, organizationSchema } from '../lib/seo';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Privacy policy', href: '/privacy/' },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'WebPage',
+    name: 'Privacy policy',
+    url: `${SITE.url}/privacy/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+]);
+---
+
+<PageLayout
+  title="Privacy Policy"
+  description="What data HostScope collects, what it does not collect, how affiliate tracking works, and how to exercise your rights."
+  eyebrow="Legal"
+  canonical={`${SITE.url}/privacy/`}
+  breadcrumbs={breadcrumbs}
+  schema={schema}
+  updated={new Date('2026-09-10')}
+>
+  <p class="lead text-[1.125rem] text-ink-700">
+    HostScope is a static website. It has no login, no user accounts and no forms that submit data to
+    our servers. The amount of personal information we hold is close to nothing, and this page
+    explains precisely what that means.
+  </p>
+
+  <h2 id="what-we-collect">What we collect</h2>
+
+  <h3>Information you send us</h3>
+  <p>
+    If you email us, we receive your email address and whatever you write. We keep correspondence for
+    as long as it is useful for handling corrections and reader questions, and we do not add anyone to
+    a mailing list.
+  </p>
+
+  <h3>Information collected automatically</h3>
+  <p>
+    Like most websites, our hosting provider and any analytics service we use may record standard
+    technical information: IP address, browser type, referring page, pages visited and timestamps.
+    This is aggregate data used to understand which articles are useful. It is not linked to your
+    identity.
+  </p>
+
+  <h3>Information stored in your browser</h3>
+  <p>
+    We use browser storage for exactly one thing: remembering whether you dismissed the floating offer
+    bar, so it does not reappear during the same visit. This is stored in <code>sessionStorage</code>,
+    is not transmitted to us, and is cleared when you close the tab.
+  </p>
+
+  <h2 id="what-we-do-not-collect">What we do not collect</h2>
+
+  <ul>
+    <li>We do not ask for or store payment details. Nothing is sold on this site.</li>
+    <li>We do not run user accounts, comments or forums.</li>
+    <li>We do not sell, rent or share personal data with third parties for marketing.</li>
+    <li>We do not build advertising profiles.</li>
+    <li>We do not use cross-site tracking pixels to follow you around the web.</li>
+  </ul>
+
+  <h2 id="affiliate-tracking">How affiliate tracking works</h2>
+
+  <p>
+    When you click a Hostinger link on this site, the link includes our affiliate identifier and a
+    placement tag. Hostinger and its affiliate network use that to attribute the visit and, if you
+    buy, to pay us a commission. If you then purchase, Hostinger may set cookies on its own domain as
+    part of its checkout and affiliate attribution process.
+  </p>
+
+  <p>
+    Once you leave this site, Hostinger's privacy policy governs what happens to your data. We do not
+    receive your name, email address or order details — the affiliate network reports aggregate
+    numbers such as clicks and conversions, not personal information.
+  </p>
+
+  <p>
+    If you prefer not to be tracked, use your browser's private mode, a tracker blocker, or simply
+    visit hostinger.com directly. You will pay the same price.
+  </p>
+
+  <h2 id="cookies">Cookies</h2>
+
+  <p>
+    HostScope itself does not set advertising or profiling cookies. Any cookies you encounter on this
+    site would come from third-party services embedded in a page, such as an analytics script or a
+    font provider. The site loads fonts from Google Fonts, which may see your IP address and user
+    agent as part of serving the font files.
+  </p>
+
+  <h2 id="third-parties">Third-party services</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Service</th>
+        <th>Purpose</th>
+        <th>What it sees</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Website host / CDN</td>
+        <td>Serving the pages</td>
+        <td>IP address, request metadata, standard server logs</td>
+      </tr>
+      <tr>
+        <td>Google Fonts</td>
+        <td>Loading the Inter typeface</td>
+        <td>IP address, user agent</td>
+      </tr>
+      <tr>
+        <td>Hostinger affiliate network</td>
+        <td>Attributing referrals</td>
+        <td>Click events, referral identifier, aggregate conversions</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 id="your-rights">Your rights</h2>
+
+  <p>
+    Depending on where you live, you may have rights under the GDPR, UK GDPR, CCPA or similar
+    legislation to access, correct, delete or restrict processing of your personal data. Because we
+    hold almost no personal data, in practice this usually means email correspondence. To make a
+    request, contact{' '}
+    <a href={`mailto:${SITE.publisher.email}`}>{SITE.publisher.email}</a> and we will respond within 30
+    days.
+  </p>
+
+  <h2 id="children">Children</h2>
+
+  <p>
+    This site is aimed at people making business and personal website decisions. It is not directed at
+    children under 16 and we do not knowingly collect data from them.
+  </p>
+
+  <h2 id="changes">Changes to this policy</h2>
+
+  <p>
+    If this policy changes materially, the "last updated" date at the top of this page will change and
+    the substance of the change will be described here.
+  </p>
+
+  <h2 id="contact">Contact</h2>
+
+  <p>
+    Privacy questions: <a href={`mailto:${SITE.publisher.email}`}>{SITE.publisher.email}</a>
+    <br />
+    {SITE.publisher.legalName}, {SITE.publisher.address}
+  </p>
+</PageLayout>

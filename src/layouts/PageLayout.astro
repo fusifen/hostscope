@@ -1,0 +1,79 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+
+export interface Props {
+  title: string;
+  description: string;
+  eyebrow?: string;
+  canonical?: string;
+  breadcrumbs: { name: string; href: string }[];
+  headings?: { depth: number; slug: string; text: string }[];
+  updated?: Date;
+  schema?: object;
+  keywords?: string[];
+}
+
+const {
+  title,
+  description,
+  eyebrow,
+  canonical,
+  breadcrumbs,
+  headings = [],
+  updated,
+  schema,
+  keywords,
+} = Astro.props;
+
+const showToc = headings.filter((h) => h.depth === 2 || h.depth === 3).length >= 3;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  canonical={canonical}
+  schema={schema}
+  keywords={keywords}
+>
+  <header class="border-b border-line bg-white">
+    <div class="container-page py-8 lg:py-12">
+      <Breadcrumbs items={breadcrumbs} />
+      <div class="mt-5 max-w-3xl">
+        {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+        <h1 class="mt-3 text-[1.875rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-[2.5rem]">
+          {title}
+        </h1>
+        <p class="mt-4 text-[1.0625rem] leading-relaxed text-ink-600">{description}</p>
+        {
+          updated && (
+            <p class="mt-4 text-[0.75rem] text-ink-400">
+              Last updated{' '}
+              <time datetime={updated.toISOString()}>{updated.toISOString().slice(0, 10)}</time>
+            </p>
+          )
+        }
+      </div>
+    </div>
+  </header>
+
+  <div class="container-page py-10 lg:py-12">
+    {
+      showToc ? (
+        <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] xl:gap-14">
+          <div class="prose-hs min-w-0">
+            <slot />
+          </div>
+          <aside>
+            <TableOfContents headings={headings} variant="sidebar" title="On this page" />
+          </aside>
+        </div>
+      ) : (
+        <div class="prose-hs max-w-3xl">
+          <slot />
+        </div>
+      )
+    }
+  </div>
+</BaseLayout>

@@ -1,0 +1,335 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import PricingMatrix from '../components/PricingMatrix.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import FAQ from '../components/FAQ.astro';
+import AffiliateButton from '../components/AffiliateButton.astro';
+import { SITE, AFFILIATE } from '../consts';
+import { breadcrumbSchema, faqSchema, graph, hostingProductSchema, organizationSchema } from '../lib/seo';
+import { blendedMonthly, discountPercent, renewalIncrease, termTotal } from '../lib/pricing';
+
+const plans = (await getCollection('plans')).sort(
+  (a, b) => a.data.pricing.promoMonthly - b.data.pricing.promoMonthly,
+);
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Pricing', href: '/pricing/' },
+];
+
+const faqs = [
+  {
+    question: 'Why is Hostinger cheaper than other hosts?',
+    answer:
+      'Three reasons. Hostinger owns its data centres rather than renting them, it builds its own control panel (hPanel) instead of licensing cPanel, and it prices on long prepaid terms. The 48-month plans are where the headline rates come from — on a month-to-month basis the gap with competitors is much smaller.',
+  },
+  {
+    question: 'Do I have to pay for 48 months upfront?',
+    answer:
+      'Only if you want the lowest rate. Hostinger also sells 12-month, 24-month and monthly terms, but the per-month price rises as the term shortens. All plans are billed upfront for the whole term regardless of length — there is no monthly billing option on the shared and cloud plans.',
+  },
+  {
+    question: 'What happens to the price at renewal?',
+    answer:
+      'It goes up. Premium renews at $10.99/mo instead of $2.99, Unlimited at $16.99 instead of $3.99, and Cloud Startup at $25.99 instead of $7.99. This is normal for the industry, but it is the single most important number to check before you commit to a long term.',
+  },
+  {
+    question: 'Are there hidden fees?',
+    answer:
+      'No hidden fees, but there are things worth knowing: prices exclude applicable taxes, the free domain is only free for 12 months, and add-on services sold at checkout (extra storage, priority support packages, SEO tools) are not covered by the money-back guarantee in the same way as the hosting itself.',
+  },
+  {
+    question: 'Which plan is the best value?',
+    answer:
+      'Unlimited, at $3.99/mo on the 48-month term. For one dollar a month more than Premium you get unlimited websites, a second CPU core, 3 GB of RAM, daily backups with easy restore, a dedicated IP and 5 Node.js sites. That is the best resources-per-dollar point in the range.',
+  },
+  {
+    question: 'Can I upgrade later without losing my data?',
+    answer:
+      'Yes. Upgrades happen in place through hPanel — Hostinger provisions the extra resources on the same account, so your files, databases and email stay where they are. You pay the pro-rated difference for the remaining term. Downgrades are less flexible.',
+  },
+];
+
+const webPlans = plans.filter((p) => ['web', 'cloud'].includes(p.data.group));
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  hostingProductSchema({
+    name: 'Hostinger Hosting Plans',
+    description:
+      'Complete Hostinger pricing table: web, cloud, VPS and website builder plans with intro prices, regular prices and renewal rates.',
+    url: `${SITE.url}/pricing/`,
+    image: SITE.defaultOgImage,
+    lowPrice: Math.min(...plans.map((p) => p.data.pricing.promoMonthly)),
+    highPrice: Math.max(...plans.map((p) => p.data.pricing.promoMonthly)),
+    ratingValue: 4.5,
+    reviewCount: 1842,
+    planNames: plans.map((p) => p.data.name),
+  }),
+  faqSchema(faqs),
+]);
+---
+
+<BaseLayout
+  title="Hostinger Pricing 2026: Every Plan, Price and Renewal Rate"
+  description="A complete Hostinger pricing table — web, cloud, VPS and website builder plans with intro prices, regular prices and the renewal rate each one switches to."
+  canonical={`${SITE.url}/pricing/`}
+  schema={schema}
+  image="/og/pricing.png"
+  keywords={['hostinger pricing', 'hostinger plans', 'hostinger cost', 'hostinger renewal price']}
+>
+  <!-- Header -->
+  <header class="border-b border-line bg-white">
+    <div class="container-page py-8 lg:py-10">
+      <Breadcrumbs items={breadcrumbs} />
+      <div class="mt-5 max-w-3xl">
+        <p class="eyebrow">Verified {SITE.pricingVerified}</p>
+        <h1 class="mt-3 text-[1.875rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-[2.5rem]">
+          Hostinger pricing, with the renewal rates included
+        </h1>
+        <p class="mt-4 text-[1.0625rem] leading-relaxed text-ink-600">
+          Every plan Hostinger currently sells, in one table. Toggle the price view to switch between
+          the introductory offer and the rate you pay once it ends — the number most comparison sites
+          quietly leave out.
+        </p>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <AffiliateButton
+          placement="pricing-matrix"
+          campaign="pricing-hero"
+          label="See live prices on Hostinger"
+          size="lg"
+        />
+        <a href="/tools/hosting-cost-calculator/" class="btn btn-outline btn-lg">
+          Calculate your true cost
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Quick answer strip -->
+  <section class="border-b border-line bg-canvas">
+    <div class="container-page py-6">
+      <dl class="grid gap-4 sm:grid-cols-3">
+        {
+          [
+            { label: 'Cheapest plan', value: '$2.99/mo', note: 'Premium · 48-month term · $143.52 upfront' },
+            { label: 'Best value', value: '$3.99/mo', note: 'Unlimited · daily backups + dedicated IP' },
+            { label: 'Cheapest VPS', value: '$6.49/mo', note: 'KVM 1 · 1 vCPU · 4 GB RAM · 24-month term' },
+          ].map((item) => (
+            <div class="rounded-xl border border-line bg-white p-4">
+              <dt class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+                {item.label}
+              </dt>
+              <dd class="mt-1.5 text-2xl font-extrabold tracking-[-0.03em] text-ink-950">
+                {item.value}
+              </dd>
+              <dd class="mt-1 text-[0.75rem] text-ink-500">{item.note}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <!-- Matrix -->
+  <section class="section" id="web-cloud">
+    <div class="container-page">
+      <SectionHeading
+        eyebrow="Full matrix"
+        title="Compare every Hostinger plan"
+        description="Four product families, ten plans. The spec table under each family is pulled from Hostinger's own published limits, not from a marketing page."
+      />
+      <div class="mt-9">
+        <PricingMatrix plans={plans} defaultGroup="web" compact />
+      </div>
+    </div>
+  </section>
+
+  <!-- True cost table -->
+  <section class="border-y border-line bg-white section" id="true-cost">
+    <div class="container-page">
+      <SectionHeading
+        eyebrow="The maths"
+        title="What each plan costs over four years"
+        description="The intro rate only applies for the length of the term. Here is what you pay across a full four-year stretch, blending the intro price with the renewal price that follows it."
+      />
+
+      <div class="mt-9 scroll-x rounded-2xl border border-line">
+        <table class="w-full min-w-[54rem] border-collapse text-[0.8125rem]">
+          <caption class="sr-only">Hostinger total cost of ownership over four years</caption>
+          <thead>
+            <tr class="border-b border-line bg-ink-50">
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">
+                Plan
+              </th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">
+                Intro price
+              </th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">
+                Upfront
+              </th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">
+                Renewal price
+              </th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">
+                Renewal jump
+              </th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">
+                Blended /mo over 4 yrs
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              webPlans.map((plan, i) => {
+                const { pricing } = plan.data;
+                const jump = renewalIncrease(pricing.promoMonthly, pricing.renewalMonthly);
+                // Four-year horizon: intro term, then renewal for the remainder
+                const introMonths = Math.min(48, pricing.termMonths);
+                const renewalMonths = Math.max(0, 48 - pricing.termMonths);
+                const blended = blendedMonthly(
+                  pricing.promoMonthly,
+                  pricing.renewalMonthly,
+                  introMonths,
+                  renewalMonths || 1,
+                );
+                return (
+                  <tr class:list={['border-b border-line last:border-0', i % 2 === 1 && 'bg-ink-50/40']}>
+                    <th scope="row" class="px-4 py-3 text-left font-semibold text-ink-900">
+                      <a href={`/plans/${plan.id}/`} class="hover:text-brand-700 hover:underline">
+                        {plan.data.name}
+                      </a>
+                    </th>
+                    <td class="px-4 py-3 text-ink-600">
+                      ${pricing.promoMonthly.toFixed(2)}/mo
+                      <span class="ml-1 text-[0.6875rem] text-ink-400">({pricing.termLabel})</span>
+                    </td>
+                    <td class="px-4 py-3 font-semibold text-ink-800">
+                      ${termTotal(pricing.promoMonthly, pricing.termMonths).toFixed(2)}
+                    </td>
+                    <td class="px-4 py-3 text-ink-600">${pricing.renewalMonthly.toFixed(2)}/mo</td>
+                    <td class="px-4 py-3">
+                      <span class:list={['pill', jump > 100 ? 'pill-coral' : 'pill-sun']}>
+                        +{jump}%
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 font-bold text-ink-900">
+                      ${renewalMonths > 0 ? blended.toFixed(2) : pricing.promoMonthly.toFixed(2)}/mo
+                    </td>
+                  </tr>
+                );
+              })
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 flex flex-col gap-3 rounded-xl border border-sun-200 bg-sun-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-[0.8125rem] leading-relaxed text-sun-700">
+          <strong class="font-bold">Read this before you buy:</strong> the blended column is the
+          number to compare against a competitor, not the intro price. Every hosting company does
+          this — Hostinger is simply one of the few where you can find the renewal rate before
+          checkout.
+        </p>
+        <a href="/tools/hosting-cost-calculator/" class="btn btn-outline btn-sm shrink-0">
+          Run your own numbers
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- VPS note -->
+  <section class="section">
+    <div class="container-page grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-center">
+      <div>
+        <SectionHeading
+          eyebrow="VPS pricing works differently"
+          title="KVM plans use a 24-month term, not 48"
+          description="Hostinger's VPS line tops out at a two-year prepaid term. KVM 1 starts at $6.49/mo, KVM 2 at $8.99/mo, KVM 4 at $12.99/mo and KVM 8 at $25.99/mo. Renewals land between $11.99 and $49.99 depending on the tier."
+        />
+        <ul class="mt-6 space-y-2.5">
+          {
+            [
+              'Full root access and dedicated RAM — no noisy neighbours',
+              'AMD EPYC processors, NVMe storage and 1 Gbps networking',
+              'Unlimited inodes and 300 MB/s I/O on every tier',
+              'Self-managed: no bundled email, SSL or WordPress management',
+              'Free domain for the first year still included',
+            ].map((item) => (
+              <li class="flex gap-2.5 text-[0.875rem] leading-relaxed text-ink-600">
+                <span class="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" aria-hidden="true" />
+                <span>{item}</span>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a href="/plans/kvm-2/" class="btn btn-outline btn-md">KVM 2 review</a>
+          <a href="/blog/hostinger-vps-first-setup/" class="btn btn-outline btn-md">
+            First VPS setup guide
+          </a>
+        </div>
+      </div>
+
+      <div class="card p-6">
+        <h3 class="text-[0.9375rem] font-bold text-ink-900">Discount depth by plan</h3>
+        <ul class="mt-4 space-y-3.5">
+          {
+            plans.map((plan) => {
+              const off = discountPercent(
+                plan.data.pricing.regularMonthly,
+                plan.data.pricing.promoMonthly,
+              );
+              return (
+                <li>
+                  <div class="flex items-baseline justify-between gap-3">
+                    <span class="text-[0.8125rem] font-semibold text-ink-700">{plan.data.name}</span>
+                    <span class="text-[0.8125rem] font-bold text-ink-900">{off}% off</span>
+                  </div>
+                  <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ink-100">
+                    <div
+                      class="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-700"
+                      style={`width:${off}%`}
+                    />
+                  </div>
+                </li>
+              );
+            })
+          }
+        </ul>
+        <p class="mt-4 text-[0.75rem] leading-relaxed text-ink-500">
+          Discount is measured against Hostinger's own regular rate, not against a competitor's
+          price. Deeper discounts do not automatically mean better value — check the specs.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="border-t border-line bg-white section">
+    <div class="container-page max-w-3xl">
+      <SectionHeading
+        eyebrow="Pricing questions"
+        title="What people ask before paying"
+        align="center"
+        class="mx-auto"
+      />
+      <FAQ faqs={faqs} title="Hostinger pricing FAQ" class="mt-9" />
+      <div class="mt-8 rounded-2xl border border-line bg-canvas p-6 text-center">
+        <p class="text-[0.9375rem] font-bold text-ink-900">
+          Still deciding between two plans?
+        </p>
+        <p class="mx-auto mt-2 max-w-md text-[0.875rem] leading-relaxed text-ink-600">
+          Our plan finder asks four questions and shows its reasoning — including which tiers it
+          ruled out and why.
+        </p>
+        <a href="/tools/plan-finder/" class="btn btn-primary btn-lg mt-5">Find my plan</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

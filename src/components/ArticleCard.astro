@@ -1,0 +1,127 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { CATEGORIES } from '../consts';
+import { formatDateShort } from '../lib/pricing';
+
+export interface Props {
+  article: CollectionEntry<'articles'>;
+  /** 'default' = vertical card, 'wide' = horizontal with more copy. */
+  variant?: 'default' | 'wide' | 'compact';
+  class?: string;
+}
+
+const { article, variant = 'default', class: className = '' } = Astro.props;
+const { data } = article;
+const category = CATEGORIES[data.category as keyof typeof CATEGORIES];
+
+// Deterministic gradient per article so cards look varied but never random
+const palettes = [
+  ['#673DE6', '#2F1770'],
+  ['#0E7490', '#134E4A'],
+  ['#B45309', '#78350F'],
+  ['#7C3AED', '#1E1B4B'],
+  ['#047857', '#064E3B'],
+  ['#BE123C', '#4C0519'],
+];
+const seed = article.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+const [from, to] = palettes[seed % palettes.length];
+
+const categoryHref = `/category/${data.category}/`;
+---
+
+{
+  variant === 'compact' ? (
+    <a
+      href={`/blog/${article.id}/`}
+      class={`group flex items-start gap-3 rounded-xl p-2 transition hover:bg-brand-50 ${className}`}
+    >
+      <span
+        class="mt-0.5 h-9 w-9 shrink-0 rounded-lg"
+        style={`background:linear-gradient(135deg, ${from}, ${to})`}
+        aria-hidden="true"
+      />
+      <span class="min-w-0">
+        <span class="block text-[0.8125rem] font-semibold leading-snug text-ink-900 group-hover:text-brand-700">
+          {data.title}
+        </span>
+        <span class="mt-1 block text-[0.6875rem] text-ink-400">
+          {formatDateShort(data.pubDate)} · {data.readingTime ?? 9} min read
+        </span>
+      </span>
+    </a>
+  ) : (
+    <article
+      class:list={[
+        'card card-hover group flex flex-col overflow-hidden',
+        variant === 'wide' && 'sm:flex-row',
+        className,
+      ]}
+      data-reveal
+    >
+      <a
+        href={`/blog/${article.id}/`}
+        class:list={[
+          'relative block shrink-0 overflow-hidden',
+          variant === 'wide' ? 'sm:w-56' : 'h-32',
+        ]}
+        tabindex="-1"
+        aria-hidden="true"
+      >
+        <span
+          class="block h-full w-full"
+          style={`background:linear-gradient(135deg, ${from}, ${to})`}
+        />
+        <span class="absolute inset-0 grid-backdrop opacity-40" />
+        <span
+          class="absolute bottom-3 left-3 rounded-md bg-white/15 px-2 py-0.5 text-[0.625rem] font-bold tracking-[0.08em] text-white uppercase backdrop-blur"
+        >
+          {category?.label ?? data.category}
+        </span>
+      </a>
+
+      <div class="flex min-w-0 flex-1 flex-col p-5">
+        <div class="flex flex-wrap items-center gap-2 text-[0.6875rem] text-ink-400">
+          <a
+            href={categoryHref}
+            class="font-semibold tracking-[0.06em] text-brand-700 uppercase hover:underline"
+          >
+            {category?.label ?? data.category}
+          </a>
+          <span aria-hidden="true">·</span>
+          <time datetime={data.pubDate.toISOString()}>{formatDateShort(data.pubDate)}</time>
+          <span aria-hidden="true">·</span>
+          <span>{data.readingTime ?? 9} min read</span>
+        </div>
+
+        <h3 class="mt-2 text-[1.0625rem] font-bold leading-snug tracking-[-0.015em]">
+          <a
+            href={`/blog/${article.id}/`}
+            class="text-ink-950 decoration-brand-300 decoration-2 underline-offset-4 transition group-hover:text-brand-700 group-hover:underline"
+          >
+            {data.title}
+          </a>
+        </h3>
+
+        <p class="mt-2.5 line-clamp-3 flex-1 text-[0.875rem] leading-relaxed text-ink-600">
+          {data.description}
+        </p>
+
+        <div class="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3">
+          <div class="flex flex-wrap gap-1.5">
+            {data.tags.slice(0, 2).map((tag) => (
+              <span class="pill pill-ink !normal-case !tracking-normal">{tag}</span>
+            ))}
+          </div>
+          <span
+            class="inline-flex items-center gap-1 text-[0.75rem] font-semibold text-brand-700 opacity-0 transition group-hover:opacity-100"
+          >
+            Read
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3" aria-hidden="true">
+              <path d="M3 8h9m0 0-3.5-3.5M12 8l-3.5 3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </span>
+        </div>
+      </div>
+    </article>
+  )
+}

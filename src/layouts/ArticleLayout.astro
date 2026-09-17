@@ -1,0 +1,312 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import AuthorCard from '../components/AuthorCard.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+import AffiliateDisclosure from '../components/AffiliateDisclosure.astro';
+import ArticleCTA from '../components/ArticleCTA.astro';
+import FAQ from '../components/FAQ.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import { CATEGORIES, SITE } from '../consts';
+import { formatDate } from '../lib/pricing';
+import { articleSchema, breadcrumbSchema, faqSchema, howToSchema, graph } from '../lib/seo';
+
+export interface Props {
+  article: CollectionEntry<'articles'>;
+  headings: { depth: number; slug: string; text: string }[];
+  /** The plan this article should push most prominently. */
+  primaryPlan?: CollectionEntry<'plans'>;
+  /** Related articles resolved by the page. */
+  related?: CollectionEntry<'articles'>[];
+  /** Word count, used for schema. */
+  wordCount?: number;
+  /** Social card image; defaults to the build-time generated one. */
+  ogImage?: string;
+}
+
+const { article, headings, primaryPlan, related = [], wordCount, ogImage } = Astro.props;
+const { data } = article;
+
+const url = new URL(`/blog/${article.id}/`, SITE.url).toString();
+const category = CATEGORIES[data.category as keyof typeof CATEGORIES];
+const heroImage = ogImage ?? data.heroImage ?? `/og/blog-${article.id}.png`;
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: category?.label ?? 'Articles', href: `/category/${data.category}/` },
+  { name: data.title, href: `/blog/${article.id}/` },
+];
+
+const schemaNodes: object[] = [
+  breadcrumbSchema(breadcrumbs),
+  articleSchema({
+    headline: data.title,
+    description: data.description,
+    url,
+    image: heroImage,
+    datePublished: data.pubDate,
+    dateModified: data.updatedDate,
+    authorName: data.author,
+    section: category?.label ?? data.category,
+    keywords: data.tags,
+    wordCount,
+  }),
+];
+
+if (data.faqs.length > 0) schemaNodes.push(faqSchema(data.faqs));
+if (data.steps.length > 0) {
+  schemaNodes.push(
+    howToSchema({
+      name: data.title,
+      description: data.description,
+      steps: data.steps,
+      image: heroImage,
+    }),
+  );
+}
+
+const showToc = headings.filter((h) => h.depth === 2 || h.depth === 3).length >= 3;
+---
+
+<BaseLayout
+  title={data.seoTitle ?? data.title}
+  description={data.seoDescription ?? data.description}
+  image={heroImage}
+  canonical={url}
+  type="article"
+  noindex={data.noindex}
+  schema={graph(schemaNodes)}
+  publishedTime={data.pubDate}
+  modifiedTime={data.updatedDate}
+  author={data.author}
+  keywords={data.tags}
+>
+  <!-- ── Article header ──────────────────────────────────────────────── -->
+  <header class="border-b border-line bg-white">
+    <div class="container-page py-8 lg:py-10">
+      <Breadcrumbs items={breadcrumbs} />
+
+      <div class="mt-5 max-w-3xl">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <a
+            href={`/category/${data.category}/`}
+            class="pill pill-brand hover:bg-brand-200"
+          >
+            {category?.label ?? data.category}
+          </a>
+          {data.featured && <span class="pill pill-sun">Editor's pick</span>}
+          {data.rating !== undefined && (
+            <span class="pill pill-mint">Rated {data.rating.toFixed(1)}/5</span>
+          )}
+        </div>
+
+        <h1
+          class="mt-4 text-[1.875rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-[2.375rem] lg:text-[2.75rem]"
+        >
+          {data.title}
+        </h1>
+
+        <p class="mt-4 text-[1.0625rem] leading-relaxed text-ink-600">{data.description}</p>
+
+        <div
+          class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[0.8125rem] text-ink-500"
+        >
+          <span class="flex items-center gap-1.5">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3.5 w-3.5" aria-hidden="true">
+              <circle cx="8" cy="5.5" r="2.8"></circle>
+              <path d="M2.8 14c.6-2.6 2.7-4 5.2-4s4.6 1.4 5.2 4" stroke-linecap="round"></path>
+            </svg>
+            By <strong class="font-semibold text-ink-700">{data.author.replace('-', ' ')}</strong>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3.5 w-3.5" aria-hidden="true">
+              <rect x="2.5" y="3.5" width="11" height="10" rx="1.6"></rect>
+              <path d="M2.5 6.5h11M5.5 2.5v2M10.5 2.5v2" stroke-linecap="round"></path>
+            </svg>
+            <time datetime={data.pubDate.toISOString()}>{formatDate(data.pubDate)}</time>
+          </span>
+          {data.updatedDate && (
+            <span class="flex items-center gap-1.5">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3.5 w-3.5" aria-hidden="true">
+                <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+              Updated <time datetime={data.updatedDate.toISOString()}>{formatDate(data.updatedDate)}</time>
+            </span>
+          )}
+          <span class="flex items-center gap-1.5">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3.5 w-3.5" aria-hidden="true">
+              <circle cx="8" cy="8" r="5.8"></circle>
+              <path d="M8 4.6V8l2.4 1.6" stroke-linecap="round"></path>
+            </svg>
+            {data.readingTime ?? 9} min read
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Body ────────────────────────────────────────────────────────── -->
+  <div class="container-page py-8 lg:py-12">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14">
+      <div class="min-w-0">
+        {data.affiliateNotice && <AffiliateDisclosure class="mb-8" />}
+
+        <!-- Relocated into the body by JS; stays here without it -->
+        <div data-inline-cta class="mb-8">
+          <ArticleCTA plan={primaryPlan} variant="inline" placement="article-inline" />
+        </div>
+
+        <TableOfContents headings={headings} variant="inline" class="mb-8" />
+
+        <div class="prose-hs" data-article-body>
+          <slot />
+        </div>
+
+        {data.steps.length > 0 && (
+          <section class="mt-12 not-prose">
+            <h2 class="text-xl font-extrabold tracking-[-0.02em] text-ink-950 sm:text-2xl">
+              Quick reference: the steps
+            </h2>
+            <ol class="mt-5 space-y-3">
+              {data.steps.map((step, i) => (
+                <li class="flex gap-4 rounded-xl border border-line bg-white p-4">
+                  <span
+                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-[0.8125rem] font-bold text-brand-700"
+                    aria-hidden="true"
+                  >
+                    {i + 1}
+                  </span>
+                  <div class="min-w-0">
+                    <p class="text-[0.9375rem] font-semibold text-ink-900">{step.name}</p>
+                    <p class="mt-1 text-[0.875rem] leading-relaxed text-ink-600">{step.text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+
+        {data.faqs.length > 0 && <FAQ faqs={data.faqs} class="mt-12" />}
+
+        <div class="mt-12">
+          <ArticleCTA plan={primaryPlan} variant="footer" placement="article-footer" />
+        </div>
+
+        <!-- Author -->
+        <div class="mt-10 rounded-2xl border border-line bg-white p-5">
+          <AuthorCard author={data.author} detailed updated={data.updatedDate} />
+          <p class="mt-4 border-t border-line pt-4 text-[0.75rem] leading-relaxed text-ink-500">
+            {SITE.name} tests hosting hands-on and publishes the renewal prices, resource limits and
+            limitations that most review sites leave out. Read our
+            <a href="/how-we-test/" class="font-semibold text-brand-700 hover:underline">
+              testing methodology
+            </a>
+            and
+            <a href="/editorial-policy/" class="font-semibold text-brand-700 hover:underline">
+              editorial policy
+            </a>.
+          </p>
+        </div>
+
+        {
+          related.length > 0 && (
+            <section class="mt-12">
+              <h2 class="text-xl font-extrabold tracking-[-0.02em] text-ink-950 sm:text-2xl">
+                Keep reading
+              </h2>
+              <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                {related.map((item) => (
+                  <ArticleCard article={item} />
+                ))}
+              </div>
+            </section>
+          )
+        }
+      </div>
+
+      <!-- ── Sidebar ──────────────────────────────────────────────────── -->
+      <aside class="space-y-5">
+        <TableOfContents headings={headings} variant="sidebar" />
+
+        <div class="space-y-5 lg:sticky lg:top-28">
+          <ArticleCTA plan={primaryPlan} variant="sidebar" placement="sidebar-widget" />
+
+          <div class="rounded-2xl border border-line bg-white p-4">
+            <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+              Jump to
+            </p>
+            <ul class="mt-2.5 space-y-1.5">
+              <li>
+                <a href="/pricing/" class="link-quiet text-[0.8125rem] font-medium">
+                  Full pricing matrix →
+                </a>
+              </li>
+              <li>
+                <a href="/tools/plan-finder/" class="link-quiet text-[0.8125rem] font-medium">
+                  Which plan fits you? →
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/tools/hosting-cost-calculator/"
+                  class="link-quiet text-[0.8125rem] font-medium"
+                >
+                  True cost calculator →
+                </a>
+              </li>
+              <li>
+                <a href="/coupons/" class="link-quiet text-[0.8125rem] font-medium">
+                  Working promo codes →
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {
+            data.tags.length > 0 && (
+              <div class="rounded-2xl border border-line bg-white p-4">
+                <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+                  Tags
+                </p>
+                <ul class="mt-2.5 flex flex-wrap gap-1.5">
+                  {data.tags.map((tag) => (
+                    <li>
+                      <a
+                        href={`/tag/${tag.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/`}
+                        class="pill pill-ink !normal-case !tracking-normal hover:bg-brand-100 hover:text-brand-800"
+                      >
+                        {tag}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          }
+        </div>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  /**
+   * Move the inline CTA from directly under the header into the article body,
+   * after the third paragraph. Server-rendered markup stays crawlable; this is
+   * purely a placement enhancement.
+   */
+  (function () {
+    const cta = document.querySelector<HTMLElement>('[data-inline-cta]');
+    const body = document.querySelector<HTMLElement>('[data-article-body]');
+    if (!cta || !body) return;
+
+    const paragraphs = Array.from(body.querySelectorAll(':scope > p'));
+    const anchor = paragraphs[3] ?? paragraphs[paragraphs.length - 1];
+    if (anchor?.parentNode) {
+      anchor.parentNode.insertBefore(cta, anchor.nextSibling);
+      cta.classList.remove('mb-8');
+      cta.classList.add('my-8');
+    }
+  })();
+</script>

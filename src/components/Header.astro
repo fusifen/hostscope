@@ -1,0 +1,256 @@
+---
+import { PRIMARY_NAV, SITE, affiliateUrl } from '../consts';
+import Logo from './Logo.astro';
+import AffiliateButton from './AffiliateButton.astro';
+
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+
+function isActive(href: string): boolean {
+  const clean = href.split('#')[0].replace(/\/+$/, '') || '/';
+  if (clean === '/') return path === '/';
+  return path === clean || path.startsWith(`${clean}/`);
+}
+
+const dealUrl = affiliateUrl({ placement: 'header-cta', campaign: 'top-bar' });
+---
+
+<!-- ── Deal strip ─────────────────────────────────────────────────────── -->
+<div class="relative z-40 bg-ink-950 text-white">
+  <div class="container-page flex h-9 items-center justify-between gap-4 text-[0.75rem]">
+    <p class="flex items-center gap-2 truncate">
+      <span class="inline-flex h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-mint-500"></span>
+      <span class="truncate">
+        <strong class="font-semibold">Live:</strong>
+        Hostinger's 48-month pricing is down to
+        <strong class="font-semibold text-mint-200">$2.99/mo</strong>
+        — free domain + SSL included.
+      </span>
+    </p>
+    <a
+      href={dealUrl}
+      target="_blank"
+      rel="sponsored nofollow noopener"
+      class="hidden shrink-0 items-center gap-1 font-semibold text-mint-200 underline decoration-mint-500/50 underline-offset-2 transition hover:text-white sm:inline-flex"
+    >
+      See the deal
+      <svg class="h-3 w-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M7 4h9v9M16 4 6.5 13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<!-- ── Main header ────────────────────────────────────────────────────── -->
+<header
+  id="site-header"
+  class="sticky top-0 z-50 border-b border-line bg-white/85 backdrop-blur-lg transition-shadow duration-300"
+>
+  <div class="container-page flex h-16 items-center justify-between gap-4 lg:h-[4.5rem]">
+    <a href="/" class="shrink-0" aria-label={`${SITE.name} home`}>
+      <Logo />
+    </a>
+
+    <!-- Desktop nav -->
+    <nav class="hidden lg:block" aria-label="Main">
+      <ul class="flex items-center gap-1">
+        {
+          PRIMARY_NAV.map((item) => (
+            <li class="group relative">
+              <a
+                href={item.href}
+                class:list={[
+                  'flex items-center gap-1 rounded-lg px-3 py-2 text-[0.875rem] font-semibold transition',
+                  isActive(item.href)
+                    ? 'bg-brand-50 text-brand-700'
+                    : 'text-ink-700 hover:bg-ink-50 hover:text-ink-950',
+                ]}
+                aria-haspopup={item.children ? 'true' : undefined}
+              >
+                {item.label}
+                {item.children && (
+                  <svg
+                    class="h-3 w-3 opacity-50 transition-transform duration-200 group-hover:rotate-180"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                )}
+              </a>
+
+              {item.children && (
+                <div class="invisible absolute left-1/2 top-full z-50 w-[21rem] -translate-x-1/2 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                  <div class="overflow-hidden rounded-2xl border border-line bg-white p-2 shadow-[var(--shadow-lift)]">
+                    {item.children.map((child) => (
+                      <a
+                        href={child.href}
+                        class="flex items-start gap-3 rounded-xl px-3 py-2.5 transition hover:bg-brand-50"
+                      >
+                        <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand-100 text-[0.625rem] font-bold text-brand-700">
+                          {child.label.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span class="min-w-0">
+                          <span class="flex items-center gap-2 text-[0.8125rem] font-semibold text-ink-900">
+                            {child.label}
+                            {child.badge && (
+                              <span class="pill pill-mint !px-1.5 !py-0.5 !text-[0.5625rem]">
+                                {child.badge}
+                              </span>
+                            )}
+                          </span>
+                          {child.description && (
+                            <span class="mt-0.5 block text-[0.75rem] leading-snug text-ink-500">
+                              {child.description}
+                            </span>
+                          )}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a
+        href="/coupons/"
+        class="hidden rounded-lg px-3 py-2 text-[0.8125rem] font-semibold text-ink-600 transition hover:bg-ink-50 hover:text-ink-900 md:inline-flex"
+      >
+        Promo codes
+      </a>
+      <div class="hidden sm:block">
+        <AffiliateButton
+          placement="header-cta"
+          label="Get Hostinger"
+          size="sm"
+          variant="primary"
+        />
+      </div>
+
+      <!-- Mobile toggle -->
+      <button
+        type="button"
+        id="nav-toggle"
+        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-white text-ink-800 lg:hidden"
+        aria-expanded="false"
+        aria-controls="mobile-nav"
+        aria-label="Open navigation menu"
+      >
+        <svg
+          id="nav-icon-open"
+          class="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"></path>
+        </svg>
+        <svg
+          id="nav-icon-close"
+          class="hidden h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile nav -->
+  <div
+    id="mobile-nav"
+    class="hidden border-t border-line bg-white lg:!hidden"
+    aria-label="Mobile navigation"
+  >
+    <div class="container-page max-h-[calc(100dvh-7rem)] overflow-y-auto py-4">
+      {
+        PRIMARY_NAV.map((item) => (
+          <details class="group border-b border-line/70 py-1 last:border-0">
+            <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg px-2 py-3 text-[0.9375rem] font-semibold text-ink-900 marker:hidden">
+              {item.label}
+              <svg
+                class="h-4 w-4 text-ink-400 transition-transform group-open:rotate-180"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="m2.5 4.5 3.5 3.5 3.5-3.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </summary>
+            <div class="pb-2 pl-2">
+              {(item.children ?? [{ label: `All ${item.label.toLowerCase()}`, href: item.href }]).map(
+                (child) => (
+                  <a
+                    href={child.href}
+                    class="block rounded-lg px-3 py-2.5 text-[0.875rem] text-ink-600 transition hover:bg-brand-50 hover:text-brand-700"
+                  >
+                    {child.label}
+                  </a>
+                ),
+              )}
+            </div>
+          </details>
+        ))
+      }
+      <div class="mt-4 pb-2">
+        <AffiliateButton
+          placement="header-cta"
+          label="Get the Hostinger deal"
+          size="lg"
+          fullWidth
+          showMicrocopy
+        />
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Mobile menu
+  const toggle = document.getElementById('nav-toggle');
+  const panel = document.getElementById('mobile-nav');
+  const iconOpen = document.getElementById('nav-icon-open');
+  const iconClose = document.getElementById('nav-icon-close');
+
+  toggle?.addEventListener('click', () => {
+    const isOpen = panel?.classList.toggle('hidden') === false;
+    toggle.setAttribute('aria-expanded', String(isOpen));
+    iconOpen?.classList.toggle('hidden', isOpen);
+    iconClose?.classList.toggle('hidden', !isOpen);
+    toggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+  });
+
+  // Close the mobile panel when a link inside it is followed
+  panel?.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      panel.classList.add('hidden');
+      toggle?.setAttribute('aria-expanded', 'false');
+      iconOpen?.classList.remove('hidden');
+      iconClose?.classList.add('hidden');
+    });
+  });
+
+  // Add depth to the header once the user scrolls
+  const header = document.getElementById('site-header');
+  const onScroll = () => {
+    if (!header) return;
+    header.classList.toggle('shadow-[0_1px_24px_-12px_rgba(10,15,30,.35)]', window.scrollY > 8);
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+</script>

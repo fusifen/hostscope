@@ -1,0 +1,133 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../consts';
+import { breadcrumbSchema, graph, organizationSchema } from '../lib/seo';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Terms of use', href: '/terms/' },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'WebPage',
+    name: 'Terms of use',
+    url: `${SITE.url}/terms/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+]);
+---
+
+<PageLayout
+  title="Terms of Use"
+  description="The terms governing your use of HostScope, including the limits of our accuracy guarantees and the independence of our editorial content."
+  eyebrow="Legal"
+  canonical={`${SITE.url}/terms/`}
+  breadcrumbs={breadcrumbs}
+  schema={schema}
+  updated={new Date('2026-09-10')}
+>
+  <p class="lead text-[1.125rem] text-ink-700">
+    By using HostScope you agree to these terms. They are short and, we hope, readable.
+  </p>
+
+  <h2 id="who-we-are">Who we are</h2>
+
+  <p>
+    HostScope is published by {SITE.publisher.legalName}. We are an independent publication. We are
+    not affiliated with, endorsed by, or operated by Hostinger International Ltd or any other hosting
+    provider mentioned on this site.
+  </p>
+
+  <h2 id="accuracy">Accuracy of information</h2>
+
+  <p>
+    We work hard to keep prices, specifications and limits accurate, and we record the date each set
+    of figures was verified. The current verification date is{' '}
+    <strong>{SITE.pricingVerified}</strong>.
+  </p>
+
+  <p>
+    That said, hosting pricing changes frequently and without notice. We cannot guarantee that every
+    figure on this site matches the price you will be quoted at checkout. <strong>The merchant's
+    checkout page is always the authoritative source.</strong> Nothing on this site is an offer, and
+    we are not a party to any transaction you enter into with a hosting provider.
+  </p>
+
+  <h2 id="no-advice">No professional advice</h2>
+
+  <p>
+    Our articles are editorial opinion and general information. They are not legal, financial or
+    professional advice for your specific circumstances. Decisions about hosting, spending and
+    infrastructure are yours to make and yours to own.
+  </p>
+
+  <h2 id="affiliate">Affiliate relationships</h2>
+
+  <p>
+    This site contains affiliate links. If you buy hosting through one, we may receive a commission at
+    no additional cost to you. Full details are on the{' '}
+    <a href="/affiliate-disclosure/">affiliate disclosure page</a>, and our editorial standards are
+    set out in the <a href="/editorial-policy/">editorial policy</a>.
+  </p>
+
+  <h2 id="third-party">Third-party services</h2>
+
+  <p>
+    We link to third-party websites, including hosting providers and review platforms. We do not
+    control those sites and are not responsible for their content, terms, pricing, availability or
+    practices. Following an outbound link means you accept that site's terms.
+  </p>
+
+  <h2 id="ip">Intellectual property</h2>
+
+  <p>
+    The text, design and original graphics on this site are owned by {SITE.publisher.legalName} and
+    protected by copyright. You may quote short excerpts with clear attribution and a link. You may
+    not republish articles in full, reproduce them for commercial purposes, or use them to train
+    machine learning models without written permission.
+  </p>
+
+  <p>
+    "Hostinger" and other product names mentioned are trademarks of their respective owners. Their use
+    here is descriptive and does not imply endorsement or affiliation.
+  </p>
+
+  <h2 id="liability">Limitation of liability</h2>
+
+  <p>
+    This site is provided "as is" and "as available". To the maximum extent permitted by law, we
+    exclude all warranties, express or implied, and we are not liable for any loss or damage arising
+    from your use of this site or from any decision you make based on its content — including loss of
+    data, loss of profit, or costs incurred with a hosting provider.
+  </p>
+
+  <h2 id="acceptable-use">Acceptable use</h2>
+
+  <p>
+    You agree not to scrape this site at a rate that degrades service for other readers, attempt to
+    compromise its security, or reproduce its content in bulk without permission.
+  </p>
+
+  <h2 id="changes">Changes to these terms</h2>
+
+  <p>
+    We may update these terms. The "last updated" date at the top of the page will change when we do,
+    and continued use of the site after a change constitutes acceptance.
+  </p>
+
+  <h2 id="governing-law">Governing law</h2>
+
+  <p>
+    These terms are governed by the laws of the State of California, United States, without regard to
+    conflict-of-law principles.
+  </p>
+
+  <h2 id="contact">Contact</h2>
+
+  <p>
+    Questions about these terms: <a href={`mailto:${SITE.publisher.email}`}>{SITE.publisher.email}</a>
+  </p>
+</PageLayout>

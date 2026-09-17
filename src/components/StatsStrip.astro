@@ -1,0 +1,65 @@
+---
+import { TRUST_STATS } from '../consts';
+
+export interface Props {
+  /** Override the default stat set. */
+  stats?: { value: string; label: string }[];
+  class?: string;
+  light?: boolean;
+}
+
+const { stats = TRUST_STATS, class: className = '', light = false } = Astro.props;
+
+/** Split "5M+" into an animatable number + affixes so GSAP can count it up. */
+function parseStat(value: string) {
+  const match = value.match(/^([^\d]*)([\d.,]+)(.*)$/);
+  if (!match) return null;
+  const [, prefix, digits, suffix] = match;
+  const numeric = Number.parseFloat(digits.replace(/,/g, ''));
+  if (Number.isNaN(numeric)) return null;
+  return { prefix, numeric, suffix, decimals: (digits.split('.')[1] ?? '').length };
+}
+---
+
+<dl
+  class:list={[
+    'grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4',
+    className,
+  ]}
+>
+  {
+    stats.map((stat) => {
+      const parsed = parseStat(stat.value);
+      return (
+        <div class="text-center sm:text-left">
+          <dt
+            class:list={[
+              'text-2xl font-extrabold tracking-[-0.03em] sm:text-[1.75rem]',
+              light ? '!text-white' : 'text-ink-950',
+            ]}
+          >
+            {parsed ? (
+              <span
+                data-count-to={String(parsed.numeric)}
+                data-count-prefix={parsed.prefix}
+                data-count-suffix={parsed.suffix}
+              >
+                {stat.value}
+              </span>
+            ) : (
+              stat.value
+            )}
+          </dt>
+          <dd
+            class:list={[
+              'mt-1 text-[0.75rem] leading-snug',
+              light ? 'text-ink-400' : 'text-ink-500',
+            ]}
+          >
+            {stat.label}
+          </dd>
+        </div>
+      );
+    })
+  }
+</dl>

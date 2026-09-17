@@ -1,0 +1,55 @@
+---
+export interface Props {
+  class?: string;
+  /** Height of the mark in px. */
+  size?: number;
+  /** Render the wordmark next to the mark. */
+  showWordmark?: boolean;
+  /** Light variant for dark backgrounds. */
+  variant?: 'dark' | 'light';
+}
+const { class: className = '', size = 32, showWordmark = true, variant = 'dark' } = Astro.props;
+const textColor = variant === 'light' ? '#ffffff' : '#0a0f1e';
+const subColor = variant === 'light' ? 'rgba(255,255,255,.62)' : '#5f6a89';
+---
+
+<span class={`inline-flex items-center gap-2.5 ${className}`}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 40 40"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+    class="shrink-0"
+  >
+    <defs>
+      <linearGradient id="hs-mark" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#9675F1"></stop>
+        <stop offset="0.55" stop-color="#673DE6"></stop>
+        <stop offset="1" stop-color="#2F1770"></stop>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="40" height="40" rx="11" fill="url(#hs-mark)"></rect>
+    <path
+      d="M11 27.5V12.5h4.6v5.4h6.1v-5.4h4.6v15h-4.6v-5.7h-6.1v5.7H11Z"
+      fill="#fff"></path>
+    <circle cx="30.5" cy="11" r="3.4" fill="#10B981"></circle>
+    <circle cx="30.5" cy="11" r="3.4" stroke="#fff" stroke-width="1.4"></circle>
+  </svg>
+  {
+    showWordmark && (
+      <span class="flex flex-col leading-none">
+        <span class="text-[1.0625rem] font-extrabold tracking-[-0.03em]" style={`color:${textColor}`}>
+          Host<span style="color:#673DE6">Scope</span>
+        </span>
+        <span
+          class="mt-0.5 text-[0.5625rem] font-semibold tracking-[0.14em] uppercase"
+          style={`color:${subColor}`}
+        >
+          Hostinger research
+        </span>
+      </span>
+    )
+  }
+</span>

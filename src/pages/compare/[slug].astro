@@ -1,0 +1,179 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import ComparisonTable from '../../components/ComparisonTable.astro';
+import ProsCons from '../../components/ProsCons.astro';
+import FAQ from '../../components/FAQ.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
+import ArticleCTA from '../../components/ArticleCTA.astro';
+import AffiliateDisclosure from '../../components/AffiliateDisclosure.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
+import { SITE } from '../../consts';
+import { breadcrumbSchema, faqSchema, graph, organizationSchema } from '../../lib/seo';
+
+export async function getStaticPaths() {
+  const comparisons = await getCollection('comparisons');
+  return comparisons.map((comparison) => ({
+    params: { slug: comparison.id },
+    props: { comparison },
+  }));
+}
+
+const { comparison } = Astro.props;
+const { data } = comparison;
+const { Content, headings } = await render(comparison);
+
+const plans = await getCollection('plans');
+const primaryPlan = plans.find((p) => p.id === 'unlimited') ?? plans[0];
+
+const url = new URL(`/compare/${comparison.id}/`, SITE.url).toString();
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Comparisons', href: '/compare/' },
+  { name: `Hostinger vs ${data.competitor}`, href: `/compare/${comparison.id}/` },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'Article',
+    headline: data.title,
+    description: data.description,
+    url,
+    datePublished: data.pubDate.toISOString(),
+    dateModified: (data.updatedDate ?? data.pubDate).toISOString(),
+    author: { '@type': 'Person', name: data.author.replace('-', ' ') },
+    publisher: { '@id': `${SITE.url}/#organization` },
+    articleSection: 'Comparisons',
+    inLanguage: 'en-US',
+  },
+  ...(data.faqs.length ? [faqSchema(data.faqs)] : []),
+]);
+---
+
+<BaseLayout
+  title={data.seoTitle ?? data.title}
+  description={data.seoDescription ?? data.description}
+  canonical={url}
+  type="article"
+  schema={schema}
+  image={`/og/compare-${comparison.id}.png`}
+  publishedTime={data.pubDate}
+  modifiedTime={data.updatedDate}
+  author={data.author}
+  keywords={[`hostinger vs ${data.competitor.toLowerCase()}`, data.competitor, 'hostinger comparison']}
+>
+  <header class="border-b border-line bg-white">
+    <div class="container-page py-8 lg:py-10">
+      <Breadcrumbs items={breadcrumbs} />
+      <div class="mt-5 max-w-3xl">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <span class="pill pill-brand">Head to head</span>
+          <span class="pill pill-mint">Winner: {data.winner}</span>
+        </div>
+        <h1 class="mt-4 text-[1.875rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-[2.375rem]">
+          {data.title}
+        </h1>
+        <p class="mt-4 text-[1.0625rem] leading-relaxed text-ink-600">{data.description}</p>
+        <div class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[0.8125rem] text-ink-500">
+          <span>By <strong class="font-semibold text-ink-700">{data.author.replace('-', ' ')}</strong></span>
+          <span>
+            Updated
+            <time datetime={(data.updatedDate ?? data.pubDate).toISOString()}>
+              {(data.updatedDate ?? data.pubDate).toISOString().slice(0, 10)}
+            </time>
+          </span>
+          <span>{data.rows.length} comparison points</span>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5">
+        <p class="eyebrow">The short answer</p>
+        <p class="mt-2.5 text-[1rem] leading-relaxed text-ink-700">
+          {data.verdict.replace(/\s+/g, ' ').trim()}
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <div class="container-page py-10 lg:py-12">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14">
+      <div class="min-w-0">
+        <section>
+          <h2 class="text-xl font-extrabold tracking-[-0.02em] text-ink-950 sm:text-2xl">
+            Hostinger vs {data.competitor}, point by point
+          </h2>
+          <p class="mt-2 text-[0.875rem] text-ink-500">
+            A check mark marks the stronger side on each row. Ties are called ties.
+          </p>
+          <div class="mt-5">
+            <ComparisonTable
+              competitor={data.competitor}
+              rows={data.rows}
+              highlightColumn={data.highlightColumn}
+            />
+          </div>
+        </section>
+
+        <section class="mt-10">
+          <h2 class="text-xl font-extrabold tracking-[-0.02em] text-ink-950 sm:text-2xl">
+            Strengths and weaknesses
+          </h2>
+          <div class="mt-5 space-y-5">
+            <div>
+              <p class="mb-3 text-[0.9375rem] font-bold text-ink-900">Hostinger</p>
+              <ProsCons pros={data.hostingerPros} cons={data.hostingerCons} />
+            </div>
+            <div>
+              <p class="mb-3 text-[0.9375rem] font-bold text-ink-900">{data.competitor}</p>
+              <ProsCons pros={data.competitorPros} cons={data.competitorCons} />
+            </div>
+          </div>
+        </section>
+
+        <AffiliateDisclosure class="mt-10" />
+
+        <TableOfContents headings={headings} variant="inline" class="mt-8" />
+
+        <div class="prose-hs mt-8">
+          <Content />
+        </div>
+
+        {data.faqs.length > 0 && <FAQ faqs={data.faqs} class="mt-10" />}
+
+        <div class="mt-10">
+          <ArticleCTA
+            plan={primaryPlan}
+            variant="footer"
+            placement="comparison-table"
+            headline={`Try Hostinger against ${data.competitor}`}
+          />
+        </div>
+
+        <div class="mt-8 rounded-2xl border border-line bg-white p-5">
+          <AuthorCard author={data.author} detailed updated={data.updatedDate} />
+        </div>
+      </div>
+
+      <aside class="space-y-5">
+        <TableOfContents headings={headings} variant="sidebar" />
+        <div class="space-y-5 lg:sticky lg:top-28">
+          <ArticleCTA plan={primaryPlan} variant="sidebar" placement="sidebar-widget" />
+          <div class="rounded-2xl border border-line bg-white p-4">
+            <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+              Other comparisons
+            </p>
+            <ul class="mt-2.5 space-y-1.5">
+              <li><a href="/compare/" class="link-quiet text-[0.8125rem] font-medium">All head-to-heads →</a></li>
+              <li><a href="/pricing/" class="link-quiet text-[0.8125rem] font-medium">Hostinger pricing matrix →</a></li>
+              <li><a href="/blog/hostinger-review/" class="link-quiet text-[0.8125rem] font-medium">Full Hostinger review →</a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

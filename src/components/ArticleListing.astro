@@ -1,0 +1,260 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import ArticleCard from './ArticleCard.astro';
+import { CATEGORIES, CATEGORY_LIST } from '../consts';
+
+export interface Props {
+  articles: CollectionEntry<'articles'>[];
+  /** All published articles, used for the sidebar counts. */
+  allArticles: CollectionEntry<'articles'>[];
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  activeCategory?: string;
+  activeTag?: string;
+  searchQuery?: string;
+}
+
+const {
+  articles,
+  allArticles,
+  currentPage,
+  totalPages,
+  totalCount,
+  activeCategory,
+  activeTag,
+  searchQuery,
+} = Astro.props;
+
+const basePath = activeCategory ? `/category/${activeCategory}/` : activeTag ? `/tag/${activeTag}/` : '/blog/';
+
+const pageHref = (page: number) => {
+  if (page === 1) return basePath;
+  if (activeCategory || activeTag) return `${basePath}?page=${page}`;
+  return `/blog/page/${page}/`;
+};
+
+// Category counts for the filter strip
+const counts = new Map<string, number>();
+allArticles.forEach((a) => {
+  counts.set(a.data.category, (counts.get(a.data.category) ?? 0) + 1);
+});
+
+const popular = allArticles
+  .slice()
+  .sort((a, b) => (b.data.rating ?? 0) - (a.data.rating ?? 0))
+  .slice(0, 5);
+
+const PAGE_SIZE_WINDOW = 2;
+const pageNumbers: (number | '…')[] = [];
+for (let i = 1; i <= totalPages; i++) {
+  if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= PAGE_SIZE_WINDOW) {
+    pageNumbers.push(i);
+  } else if (pageNumbers[pageNumbers.length - 1] !== '…') {
+    pageNumbers.push('…');
+  }
+}
+---
+
+<div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14">
+  <div class="min-w-0">
+    <!-- Category filters -->
+    <nav aria-label="Filter by category" class="scroll-x -mx-1 flex gap-2 px-1 pb-2">
+      <a
+        href="/blog/"
+        class:list={[
+          'shrink-0 rounded-xl border px-3.5 py-2 text-[0.8125rem] font-semibold transition',
+          !activeCategory && !activeTag
+            ? 'border-brand-300 bg-brand-50 text-brand-800'
+            : 'border-line bg-white text-ink-600 hover:border-brand-200 hover:text-ink-900',
+        ]}
+      >
+        All articles
+        <span class="ml-1 text-[0.6875rem] text-ink-400">{allArticles.length}</span>
+      </a>
+      {
+        CATEGORY_LIST.map((category) => (
+          <a
+            href={`/category/${category.key}/`}
+            class:list={[
+              'shrink-0 rounded-xl border px-3.5 py-2 text-[0.8125rem] font-semibold transition',
+              activeCategory === category.key
+                ? 'border-brand-300 bg-brand-50 text-brand-800'
+                : 'border-line bg-white text-ink-600 hover:border-brand-200 hover:text-ink-900',
+            ]}
+          >
+            {category.label}
+            <span class="ml-1 text-[0.6875rem] text-ink-400">{counts.get(category.key) ?? 0}</span>
+          </a>
+        ))
+      }
+    </nav>
+
+    <!-- Result summary -->
+    <div class="mt-6 flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-4">
+      <p class="text-[0.875rem] text-ink-600">
+        {
+          searchQuery ? (
+            <>
+              <strong class="font-bold text-ink-900">{totalCount}</strong> result
+              {totalCount === 1 ? '' : 's'} for “{searchQuery}”
+            </>
+          ) : activeCategory ? (
+            <>
+              <strong class="font-bold text-ink-900">{totalCount}</strong>{' '}
+              {CATEGORIES[activeCategory as keyof typeof CATEGORIES]?.label.toLowerCase() ??
+                activeCategory}
+            </>
+          ) : activeTag ? (
+            <>
+              <strong class="font-bold text-ink-900">{totalCount}</strong> article
+              {totalCount === 1 ? '' : 's'} tagged “{activeTag}”
+            </>
+          ) : (
+            <>
+              <strong class="font-bold text-ink-900">{totalCount}</strong> articles, newest first
+            </>
+          )
+        }
+      </p>
+      {totalPages > 1 && (
+        <p class="text-[0.75rem] text-ink-400">Page {currentPage} of {totalPages}</p>
+      )}
+    </div>
+
+    <!-- Grid -->
+    {
+      articles.length > 0 ? (
+        <div class="mt-7 grid gap-5 sm:grid-cols-2">
+          {articles.map((article) => (
+            <ArticleCard article={article} />
+          ))}
+        </div>
+      ) : (
+        <div class="mt-8 rounded-2xl border border-line bg-white p-8 text-center">
+          <p class="text-[0.9375rem] font-bold text-ink-900">Nothing here yet</p>
+          <p class="mx-auto mt-2 max-w-sm text-[0.875rem] text-ink-500">
+            We have not published anything in this section yet. Browse everything instead.
+          </p>
+          <a href="/blog/" class="btn btn-primary btn-md mt-5">All articles</a>
+        </div>
+      )
+    }
+
+    <!-- Pagination -->
+    {
+      totalPages > 1 && (
+        <nav aria-label="Pagination" class="mt-10 flex items-center justify-center gap-1.5">
+          <a
+            href={pageHref(Math.max(1, currentPage - 1))}
+            aria-disabled={currentPage === 1}
+            class:list={[
+              'btn btn-outline btn-sm',
+              currentPage === 1 && 'pointer-events-none opacity-40',
+            ]}
+          >
+            ← Prev
+          </a>
+          {pageNumbers.map((page) =>
+            page === '…' ? (
+              <span class="px-2 text-[0.875rem] text-ink-400" aria-hidden="true">
+                …
+              </span>
+            ) : (
+              <a
+                href={pageHref(page)}
+                aria-current={page === currentPage ? 'page' : undefined}
+                class:list={[
+                  'inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-[0.8125rem] font-semibold transition',
+                  page === currentPage
+                    ? 'border-brand-600 bg-brand-600 text-white'
+                    : 'border-line bg-white text-ink-600 hover:border-brand-300 hover:text-brand-700',
+                ]}
+              >
+                {page}
+              </a>
+            ),
+          )}
+          <a
+            href={pageHref(Math.min(totalPages, currentPage + 1))}
+            aria-disabled={currentPage === totalPages}
+            class:list={[
+              'btn btn-outline btn-sm',
+              currentPage === totalPages && 'pointer-events-none opacity-40',
+            ]}
+          >
+            Next →
+          </a>
+        </nav>
+      )
+    }
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="space-y-5">
+    <div class="rounded-2xl border border-brand-200 bg-gradient-to-b from-brand-50 to-white p-4">
+      <p class="eyebrow !text-[0.625rem]">Current deal</p>
+      <p class="mt-2 text-[0.9375rem] font-extrabold leading-snug text-ink-950">
+        Hostinger from $2.99/mo
+      </p>
+      <p class="mt-1.5 text-[0.75rem] leading-relaxed text-ink-600">
+        Free domain for a year, free SSL, 30-day money-back guarantee.
+      </p>
+      <a
+        href="/pricing/"
+        class="btn btn-primary btn-sm mt-3 w-full"
+      >
+        See all plans
+      </a>
+    </div>
+
+    <div class="rounded-2xl border border-line bg-white p-4">
+      <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+        Highest rated
+      </p>
+      <ol class="mt-3 space-y-1">
+        {
+          popular.map((article, i) => (
+            <li class="flex gap-2.5">
+              <span class="mt-2 text-[0.8125rem] font-extrabold text-brand-300">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <ArticleCard article={article} variant="compact" class="flex-1" />
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <div class="rounded-2xl border border-line bg-white p-4">
+      <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+        Categories
+      </p>
+      <ul class="mt-3 space-y-1">
+        {
+          CATEGORY_LIST.map((category) => (
+            <li>
+              <a
+                href={`/category/${category.key}/`}
+                class="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[0.8125rem] font-medium text-ink-600 transition hover:bg-brand-50 hover:text-brand-700"
+              >
+                <span>{category.label}</span>
+                <span class="text-[0.75rem] text-ink-400">{counts.get(category.key) ?? 0}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="rounded-2xl border border-line bg-white p-4">
+      <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">Tools</p>
+      <ul class="mt-2.5 space-y-1.5">
+        <li><a href="/tools/plan-finder/" class="link-quiet text-[0.8125rem] font-medium">Plan finder quiz →</a></li>
+        <li><a href="/tools/hosting-cost-calculator/" class="link-quiet text-[0.8125rem] font-medium">True cost calculator →</a></li>
+        <li><a href="/coupons/" class="link-quiet text-[0.8125rem] font-medium">Promo codes →</a></li>
+        <li><a href="/compare/" class="link-quiet text-[0.8125rem] font-medium">Comparisons →</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>

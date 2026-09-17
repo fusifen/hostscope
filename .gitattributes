@@ -1,0 +1,22 @@
+# Normalise line endings so the Linux build (Cloudflare Pages) and the
+# Windows dev machine see byte-identical sources.
+* text=auto eol=lf
+
+# Binary assets — never touched by the text filter.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Lockfile — keep it diff-friendly and never merge-generated.
+package-lock.json -diff linguist-generated
+
+# Generated output should never be committed or counted.
+dist/ export-ignore

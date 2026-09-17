@@ -1,0 +1,138 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../consts';
+import { breadcrumbSchema, graph, organizationSchema } from '../lib/seo';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Editorial policy', href: '/editorial-policy/' },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'WebPage',
+    name: 'Editorial policy',
+    url: `${SITE.url}/editorial-policy/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+]);
+---
+
+<PageLayout
+  title="Editorial Policy"
+  description="How HostScope decides what to publish, how we handle corrections, and the rules that keep commercial interests out of our recommendations."
+  eyebrow="Editorial standards"
+  canonical={`${SITE.url}/editorial-policy/`}
+  breadcrumbs={breadcrumbs}
+  schema={schema}
+  updated={new Date('2026-09-10')}
+>
+  <p class="lead text-[1.125rem] text-ink-700">
+    HostScope is funded by affiliate commission, which means our editorial independence is not
+    something readers should take on trust. It should be checkable. This page sets out the rules we
+    work to and how you can verify them.
+  </p>
+
+  <h2 id="independence">Editorial independence</h2>
+
+  <p>
+    No commercial partner has any input into what we publish. Specifically:
+  </p>
+
+  <ul>
+    <li>Hostinger does not see articles before publication.</li>
+    <li>Hostinger cannot request that a criticism be removed or softened.</li>
+    <li>We do not accept payment for a review, a score, or a placement in a "best of" list.</li>
+    <li>We do not run sponsored posts, advertorials or paid guest content.</li>
+    <li>Commission rates do not influence which plan we recommend.</li>
+  </ul>
+
+  <p>
+    That last point is the one readers are most sceptical about, so it is worth being concrete:
+    Hostinger's affiliate payout is a percentage of the sale, and the percentage does not differ
+    meaningfully between Premium at $2.99/mo and Cloud Enterprise at $29.99/mo. Recommending the
+    cheapest suitable plan does not cost us money. Recommending the wrong plan costs us the reader.
+  </p>
+
+  <h2 id="what-we-publish">What we will and will not publish</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>We publish</th>
+        <th>We do not publish</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Renewal prices on every plan</td>
+        <td>Introductory prices presented as the ongoing cost</td>
+      </tr>
+      <tr>
+        <td>Published resource limits, including the unflattering ones</td>
+        <td>Marketing feature lists copied from a vendor page</td>
+      </tr>
+      <tr>
+        <td>Explicit "do not buy this" guidance per plan</td>
+        <td>Blanket claims that one host is best for everyone</td>
+      </tr>
+      <tr>
+        <td>Comparisons where a competitor wins rows</td>
+        <td>Comparisons engineered so our preferred host wins everything</td>
+      </tr>
+      <tr>
+        <td>Corrections with a visible note</td>
+        <td>Silent edits that hide an earlier mistake</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 id="accuracy">Accuracy and sourcing</h2>
+
+  <p>
+    Every price, specification and limit we publish comes from one of three places: Hostinger's public
+    pricing pages, Hostinger's own technical documentation, or our own direct observation. Where we
+    cite a number we record the date it was checked.
+  </p>
+
+  <p>
+    We do not publish statistics we cannot source. We do not invent customer quotes, survey results or
+    benchmark figures. If a claim in an article cannot be traced to a source or to our own testing, it
+    should not be there — and if you find one, please tell us.
+  </p>
+
+  <h2 id="ai">Use of AI</h2>
+
+  <p>
+    We use AI tooling for research assistance, outline generation and copy editing. Every article is
+    reviewed by a named human editor before publication, and every factual claim about pricing or
+    specifications is checked against source data by that editor. We do not publish machine-generated
+    text that has not been verified by a person.
+  </p>
+
+  <h2 id="corrections">Corrections policy</h2>
+
+  <p>
+    When we get something wrong we fix it, and where the error was material we add a note. To request
+    a correction, email{' '}
+    <a href={`mailto:${SITE.publisher.email}`}>{SITE.publisher.email}</a> with the page URL and what is
+    incorrect. We aim to respond within two business days.
+  </p>
+
+  <ul>
+    <li><strong>Factual error in a price or specification:</strong> corrected immediately, with a note.</li>
+    <li><strong>Outdated information:</strong> updated, with the "last updated" date refreshed.</li>
+    <li><strong>Disagreement with an opinion:</strong> not a correction. We will consider publishing a counter-argument.</li>
+  </ul>
+
+  <h2 id="comments">Reader contact</h2>
+
+  <p>
+    We read everything sent to{' '}
+    <a href={`mailto:${SITE.publisher.email}`}>{SITE.publisher.email}</a>. Corrections, factual
+    challenges and "this did not work for me" reports are all genuinely useful — they are how a site
+    like this stays accurate when the underlying product changes every few months.
+  </p>
+</PageLayout>

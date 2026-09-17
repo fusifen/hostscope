@@ -1,0 +1,96 @@
+---
+/**
+ * AffiliateButton — the single conversion component used everywhere.
+ *
+ * Every outbound Hostinger link on the site goes through this component so
+ * that (a) the affiliate URL is never duplicated, (b) rel="sponsored nofollow"
+ * is always applied for Google compliance, and (c) each placement gets its own
+ * sub-id for affiliate-dashboard attribution.
+ */
+import { affiliateUrl, type AffiliatePlacement } from '../consts';
+
+export interface Props {
+  /** Where the click originated — becomes the sub_id. */
+  placement: AffiliatePlacement | string;
+  /** Optional plan slug for granular attribution. */
+  plan?: string;
+  /** Optional campaign tag. */
+  campaign?: string;
+  label?: string;
+  sublabel?: string;
+  variant?: 'primary' | 'mint' | 'outline' | 'ghost-light';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  class?: string;
+  fullWidth?: boolean;
+  /** Show the small "affiliate link" micro-copy under the button. */
+  showMicrocopy?: boolean;
+  /** Adds a subtle attention pulse (used once per page, max). */
+  pulse?: boolean;
+  id?: string;
+  ariaLabel?: string;
+}
+
+const {
+  placement,
+  plan,
+  campaign,
+  label = 'Claim Hostinger Deal',
+  sublabel,
+  variant = 'primary',
+  size = 'lg',
+  class: className = '',
+  fullWidth = false,
+  showMicrocopy = false,
+  pulse = false,
+  id,
+  ariaLabel,
+} = Astro.props;
+
+const href = affiliateUrl({ placement, plan, campaign });
+const variantClass = {
+  primary: 'btn-primary',
+  mint: 'btn-mint',
+  outline: 'btn-outline',
+  'ghost-light': 'btn-ghost-light',
+}[variant];
+---
+
+<div class={fullWidth ? 'w-full' : 'inline-flex flex-col items-start'}>
+  <a
+    href={href}
+    id={id}
+    target="_blank"
+    rel="sponsored nofollow noopener"
+    data-affiliate="true"
+    data-placement={placement}
+    data-plan={plan}
+    class={`btn ${variantClass} btn-${size} ${fullWidth ? 'w-full' : ''} ${pulse ? 'animate-pulse-ring' : ''} ${className}`}
+    aria-label={ariaLabel ?? `${label} — opens Hostinger in a new tab`}
+  >
+    <slot>{label}</slot>
+    {
+      sublabel && (
+        <span class="ml-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[0.6875rem] font-bold tracking-wide">
+          {sublabel}
+        </span>
+      )
+    }
+    <svg
+      class="h-4 w-4 shrink-0 opacity-80"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      aria-hidden="true"
+    >
+      <path d="M7 4h9v9M16 4 6.5 13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
+  </a>
+  {
+    showMicrocopy && (
+      <p class="mt-1.5 text-[0.6875rem] leading-snug text-ink-400">
+        Affiliate link · same price for you, we may earn a commission.
+      </p>
+    )
+  }
+</div>

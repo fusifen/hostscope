@@ -1,0 +1,143 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE, EDITORS } from '../consts';
+import { breadcrumbSchema, graph, organizationSchema } from '../lib/seo';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'About', href: '/about/' },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'AboutPage',
+    name: `About ${SITE.name}`,
+    url: `${SITE.url}/about/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+]);
+---
+
+<PageLayout
+  title="About HostScope"
+  description="Who we are, why we publish renewal prices when most hosting sites do not, and how the site is funded."
+  eyebrow="About"
+  canonical={`${SITE.url}/about/`}
+  breadcrumbs={breadcrumbs}
+  schema={schema}
+  updated={new Date('2026-09-10')}
+>
+  <p class="lead text-[1.125rem] text-ink-700">
+    HostScope is an independent research site about Hostinger. We publish the numbers that make
+    hosting decisions easy and that most comparison sites leave out — the renewal price, the resource
+    ceilings, the backup frequency, and the plans you should not buy.
+  </p>
+
+  <h2 id="why">Why this site exists</h2>
+
+  <p>
+    Hosting reviews have a credibility problem. Search for any host and you will find dozens of pages
+    that quote the introductory price, list the same six marketing bullets, and declare the host
+    "the best" without saying who it is best for. Almost none of them tell you what the plan renews
+    at, which is the number that determines what you actually spend.
+  </p>
+
+  <p>
+    We started HostScope because we kept having the same conversation with friends and clients: the
+    plan was fine, the price was not what they expected in year two. Hostinger is a genuinely good
+    host for a lot of people — we recommend it — but it is only good value if you understand the
+    term structure and pick the tier that matches your workload.
+  </p>
+
+  <h2 id="how-funded">How the site is funded</h2>
+
+  <p>
+    HostScope earns money through the Hostinger affiliate programme. When someone buys hosting
+    through one of our links, Hostinger pays us a commission. That commission is paid by Hostinger,
+    not by you, and it does not change the price you pay.
+  </p>
+
+  <p>
+    We think affiliate funding is fine, as long as three rules hold, and we hold to all three:
+  </p>
+
+  <ul>
+    <li>
+      <strong>Disclosure is visible, not buried.</strong> Every monetised page carries a disclosure at
+      the top. The full policy is on the <a href="/affiliate-disclosure/">affiliate disclosure page</a>.
+    </li>
+    <li>
+      <strong>Commission never changes a recommendation.</strong> Hostinger's affiliate payouts do not
+      vary enough between tiers to make upselling worthwhile. We recommend Premium for people who
+      should buy Premium and we tell people not to buy Hostinger at all when a competitor fits better
+      — our <a href="/compare/">comparison pages</a> award the win to competitors on plenty of rows.
+    </li>
+    <li>
+      <strong>We publish the bad numbers.</strong> The renewal increase on every plan, the weekly-only
+      backups on Premium, the absence of Node.js support on the cheapest tier, the 10-emails-per-minute
+      cap on server-based sending. If we hid these, nobody would trust the good numbers.
+    </li>
+  </ul>
+
+  <h2 id="team">Who writes this</h2>
+
+  <p>
+    Three people. Between us we have migrated several hundred sites between hosts, run client
+    infrastructure on KVM boxes, and built and broken enough WooCommerce stores to know where the
+    resource ceilings actually are.
+  </p>
+
+  <div class="not-prose mt-6 grid gap-4 sm:grid-cols-3">
+    {
+      Object.entries(EDITORS).map(([key, editor]) => {
+        const hue = { 'maya-ross': '#673DE6', 'daniel-okafor': '#0E7490', 'priya-nair': '#B45309' }[
+          key
+        ];
+        const initials = editor.name
+          .split(' ')
+          .map((p) => p[0])
+          .join('');
+        return (
+          <div class="rounded-2xl border border-line bg-white p-5">
+            <span
+              class="flex h-12 w-12 items-center justify-center rounded-full text-[0.9375rem] font-bold text-white"
+              style={`background:linear-gradient(135deg, ${hue}, ${hue}cc)`}
+              aria-hidden="true"
+            >
+              {initials}
+            </span>
+            <p class="mt-3 text-[0.9375rem] font-bold text-ink-900">{editor.name}</p>
+            <p class="text-[0.75rem] font-semibold text-brand-700">{editor.role}</p>
+            <p class="mt-2 text-[0.8125rem] leading-relaxed text-ink-600">{editor.bio}</p>
+          </div>
+        );
+      })
+    }
+  </div>
+
+  <h2 id="not-affiliated">What we are not</h2>
+
+  <p>
+    HostScope is not affiliated with, endorsed by, or operated by Hostinger International Ltd. We are
+    an independent publication. Hostinger does not review our articles before publication, does not
+    have input into our scores, and cannot ask us to remove criticism. Our contact at Hostinger is the
+    same affiliate programme contact available to anyone.
+  </p>
+
+  <p>
+    We also do not run paid placements, sponsored posts or "featured partner" slots. If a page
+    mentions another host, it is because the comparison is useful, not because that host paid.
+  </p>
+
+  <h2 id="corrections">Corrections</h2>
+
+  <p>
+    Hosting prices and specs change constantly. Every page that quotes a price records the date it
+    was checked — currently <strong>{SITE.pricingVerified}</strong>. If you spot something that is out
+    of date or wrong, email{' '}
+    <a href={`mailto:${SITE.publisher.email}`}>{SITE.publisher.email}</a> and we will fix it and note
+    the correction. Getting a number wrong is worse for us than admitting it.
+  </p>
+</PageLayout>

@@ -1,0 +1,362 @@
+---
+/**
+ * PricingMatrix — the flagship conversion component.
+ *
+ *  · product-family tabs (web / cloud / VPS / builder)
+ *  · a price-view switch between the intro offer and the renewal rate, because
+ *    the renewal price is the number most hosting sites bury
+ *  · a full spec-by-spec comparison table for the selected family
+ *
+ * Everything is server-rendered so it works without JavaScript and is fully
+ * crawlable; the script only toggles visibility.
+ */
+import type { CollectionEntry } from 'astro:content';
+import PlanCard from './PlanCard.astro';
+import { affiliateUrl } from '../consts';
+
+export interface Props {
+  plans: CollectionEntry<'plans'>[];
+  /** Which family is shown first. */
+  defaultGroup?: 'web' | 'cloud' | 'vps' | 'builder';
+  /** Hide the spec table. */
+  compact?: boolean;
+  placement?: string;
+  class?: string;
+}
+
+const {
+  plans,
+  defaultGroup = 'web',
+  compact = false,
+  placement = 'pricing-matrix',
+  class: className = '',
+} = Astro.props;
+
+const GROUPS = [
+  { key: 'web', label: 'Web hosting', hint: 'Best for first sites, blogs and small business' },
+  { key: 'cloud', label: 'Cloud hosting', hint: 'More power, still fully managed' },
+  { key: 'vps', label: 'VPS hosting', hint: 'Root access, self-managed' },
+  { key: 'builder', label: 'Website Builder', hint: 'No code, AI-assisted' },
+] as const;
+
+const byGroup = (key: string) =>
+  plans
+    .filter((p) => p.data.group === key)
+    .sort((a, b) => a.data.order - b.data.order);
+
+const groupsWithPlans = GROUPS.filter((g) => byGroup(g.key).length > 0);
+const activeGroup = groupsWithPlans.some((g) => g.key === defaultGroup)
+  ? defaultGroup
+  : (groupsWithPlans[0]?.key ?? 'web');
+
+const activePlans = byGroup(activeGroup);
+
+const SPEC_ROWS: { label: string; get: (p: CollectionEntry<'plans'>) => string }[] = [
+  { label: 'Websites', get: (p) => p.data.specs.websites },
+  { label: 'CPU cores', get: (p) => p.data.specs.cpuCores },
+  { label: 'RAM', get: (p) => p.data.specs.ram },
+  { label: 'Storage', get: (p) => `${p.data.specs.storage} ${p.data.specs.storageType}` },
+  { label: 'Bandwidth', get: (p) => p.data.specs.bandwidth },
+  { label: 'Inodes', get: (p) => p.data.specs.inodes ?? '—' },
+  { label: 'PHP workers', get: (p) => p.data.specs.phpWorkers ?? '—' },
+  { label: 'Databases', get: (p) => p.data.specs.databases ?? '—' },
+  { label: 'Database size', get: (p) => p.data.specs.databaseSize ?? '—' },
+  { label: 'Mailboxes', get: (p) => p.data.specs.mailboxes },
+  { label: 'Backups', get: (p) => p.data.specs.backups },
+  { label: 'Dedicated IP', get: (p) => (p.data.specs.dedicatedIp ? 'Included' : 'Not included') },
+  { label: 'Free CDN', get: (p) => (p.data.specs.cdn ? 'Included' : 'Add your own') },
+  { label: 'Free SSL', get: (p) => (p.data.specs.freeSsl ? 'Unlimited' : 'Install your own') },
+  { label: 'AI Builder credits', get: (p) => p.data.specs.aiCredits ?? '—' },
+  { label: 'Free domain', get: (p) => (p.data.pricing.freeDomain ? '1 year' : 'No') },
+  { label: 'Money-back window', get: (p) => `${p.data.pricing.moneyBackDays} days` },
+  { label: 'Intro price', get: (p) => `$${p.data.pricing.promoMonthly.toFixed(2)}/mo` },
+  { label: 'Renewal price', get: (p) => `$${p.data.pricing.renewalMonthly.toFixed(2)}/mo` },
+];
+
+const ctaHref = affiliateUrl({ placement, campaign: 'matrix' });
+---
+
+<div class={className} data-pricing-matrix>
+  <!-- ── Controls ───────────────────────────────────────────────────── -->
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div
+      class="scroll-x -mx-1 flex gap-1.5 px-1 pb-1"
+      role="tablist"
+      aria-label="Hostinger product families"
+    >
+      {
+        groupsWithPlans.map((group) => (
+          <button
+            type="button"
+            role="tab"
+            data-group-tab={group.key}
+            aria-selected={group.key === activeGroup ? 'true' : 'false'}
+            aria-controls={`panel-${group.key}`}
+            class:list={[
+              'shrink-0 rounded-xl border px-4 py-2.5 text-left transition',
+              group.key === activeGroup
+                ? 'border-brand-300 bg-brand-50 text-brand-800 shadow-[0_0_0_1px_var(--color-brand-200)]'
+                : 'border-line bg-white text-ink-600 hover:border-brand-200 hover:text-ink-900',
+            ]}
+          >
+            <span class="block text-[0.8125rem] font-bold">{group.label}</span>
+            <span class="mt-0.5 block text-[0.6875rem] leading-tight opacity-70">{group.hint}</span>
+          </button>
+        ))
+      }
+    </div>
+
+    <div class="flex shrink-0 items-center gap-3">
+      <span class="text-[0.75rem] font-semibold text-ink-500">Show:</span>
+      <div
+        class="inline-flex rounded-xl border border-line bg-white p-1"
+        role="group"
+        aria-label="Price view"
+      >
+        <button
+          type="button"
+          data-price-view="intro"
+          aria-pressed="true"
+          class="rounded-lg bg-ink-950 px-3 py-1.5 text-[0.75rem] font-bold text-white transition"
+        >
+          Intro offer
+        </button>
+        <button
+          type="button"
+          data-price-view="renewal"
+          aria-pressed="false"
+          class="rounded-lg px-3 py-1.5 text-[0.75rem] font-bold text-ink-500 transition hover:text-ink-900"
+        >
+          Renewal price
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <p class="mt-3 text-[0.75rem] leading-relaxed text-ink-500" data-price-note>
+    Prices are the <strong class="font-semibold text-ink-700">introductory rates</strong>, which
+    require paying the full term upfront. Hostinger charges the whole term at checkout — the
+    "per month" figure is the total divided by the number of months.
+  </p>
+
+  <!-- ── Panels ─────────────────────────────────────────────────────── -->
+  {
+    groupsWithPlans.map((group) => {
+      const groupPlans = byGroup(group.key);
+      const isActive = group.key === activeGroup;
+      return (
+        <div
+          id={`panel-${group.key}`}
+          role="tabpanel"
+          data-group-panel={group.key}
+          hidden={!isActive}
+          class="mt-6"
+        >
+          <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {groupPlans.map((plan, i) => (
+              <PlanCard
+                plan={plan}
+                placement={placement}
+                recommended={i === 0 && groupPlans.length > 1}
+              />
+            ))}
+          </div>
+
+          {!compact && groupPlans.length > 1 && (
+            <div class="mt-8">
+              <h3 class="text-[0.9375rem] font-bold text-ink-900">
+                {group.label} compared, spec by spec
+              </h3>
+              <div class="mt-3 scroll-x rounded-2xl border border-line bg-white">
+                <table class="w-full min-w-[46rem] border-collapse text-[0.8125rem]">
+                  <caption class="sr-only">
+                    Technical comparison of Hostinger {group.label.toLowerCase()} plans
+                  </caption>
+                  <thead>
+                    <tr class="border-b border-line bg-ink-50">
+                      <th
+                        scope="col"
+                        class="sticky left-0 z-10 bg-ink-50 px-4 py-3 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase"
+                      >
+                        Spec
+                      </th>
+                      {groupPlans.map((plan) => (
+                        <th
+                          scope="col"
+                          class="px-4 py-3 text-left text-[0.8125rem] font-bold text-ink-900"
+                        >
+                          {plan.data.name}
+                          {plan.data.badge && (
+                            <span class="ml-2 align-middle">
+                              <span class="pill pill-brand !px-1.5 !py-0.5 !text-[0.5625rem]">
+                                {plan.data.badge}
+                              </span>
+                            </span>
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SPEC_ROWS.map((row, rowIndex) => (
+                      <tr
+                        class:list={[
+                          'border-b border-line last:border-0',
+                          rowIndex % 2 === 1 && 'bg-ink-50/40',
+                        ]}
+                      >
+                        <th
+                          scope="row"
+                          class:list={[
+                            'sticky left-0 z-10 px-4 py-2.5 text-left font-semibold text-ink-700',
+                            rowIndex % 2 === 1 ? 'bg-[#f7f8fc]' : 'bg-white',
+                          ]}
+                        >
+                          {row.label}
+                        </th>
+                        {groupPlans.map((plan) => (
+                          <td class="px-4 py-2.5 text-ink-600">{row.get(plan)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })
+  }
+
+  <!-- ── Footer CTA ─────────────────────────────────────────────────── -->
+  <div
+    class="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5 sm:flex-row"
+  >
+    <div>
+      <p class="text-[0.9375rem] font-bold text-ink-950">Not sure which plan fits?</p>
+      <p class="mt-1 text-[0.8125rem] text-ink-600">
+        Answer three questions and we'll point you at the right tier — or run the numbers in the
+        cost calculator first.
+      </p>
+    </div>
+    <div class="flex shrink-0 flex-wrap gap-2">
+      <a href="/tools/plan-finder/" class="btn btn-outline btn-md">Plan finder</a>
+      <a
+        href={ctaHref}
+        target="_blank"
+        rel="sponsored nofollow noopener"
+        data-affiliate="true"
+        data-placement={placement}
+        class="btn btn-primary btn-md"
+      >
+        View plans on Hostinger
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const root = document.querySelector<HTMLElement>('[data-pricing-matrix]');
+    if (!root) return;
+
+    /* ---- Product family tabs ---------------------------------------- */
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-group-tab]'));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-group-panel]'));
+
+    function selectGroup(key: string) {
+      tabs.forEach((tab) => {
+        const active = tab.dataset.groupTab === key;
+        tab.setAttribute('aria-selected', String(active));
+        tab.classList.toggle('border-brand-300', active);
+        tab.classList.toggle('bg-brand-50', active);
+        tab.classList.toggle('text-brand-800', active);
+        tab.classList.toggle('shadow-[0_0_0_1px_var(--color-brand-200)]', active);
+        tab.classList.toggle('border-line', !active);
+        tab.classList.toggle('bg-white', !active);
+        tab.classList.toggle('text-ink-600', !active);
+      });
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.groupPanel !== key;
+      });
+      // Pinned/sticky table headers change height — let ScrollTrigger re-measure
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => selectGroup(tab.dataset.groupTab ?? 'web'));
+    });
+
+    /* ---- Intro / renewal price view --------------------------------- */
+    const viewButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('[data-price-view]'),
+    );
+    const note = root.querySelector<HTMLElement>('[data-price-note]');
+
+    const NOTE = {
+      intro:
+        'Prices are the <strong class="font-semibold text-ink-700">introductory rates</strong>, which require paying the full term upfront. Hostinger charges the whole term at checkout — the "per month" figure is the total divided by the number of months.',
+      renewal:
+        'These are the <strong class="font-semibold text-ink-700">renewal rates</strong> — what you pay after the introductory term ends. Every hosting company raises prices at renewal, but the size of the jump is worth planning for before you commit.',
+    };
+
+    function setView(view: 'intro' | 'renewal') {
+      viewButtons.forEach((btn) => {
+        const active = btn.dataset.priceView === view;
+        btn.setAttribute('aria-pressed', String(active));
+        btn.classList.toggle('bg-ink-950', active);
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('text-ink-500', !active);
+      });
+
+      root!.querySelectorAll<HTMLElement>('[data-plan-card]').forEach((card) => {
+        const intro = Number(card.dataset.introPrice ?? '0');
+        const renewal = Number(card.dataset.renewalPrice ?? '0');
+        const priceEl = card.querySelector<HTMLElement>('[data-price-display]');
+        const strikeEl = card.querySelector<HTMLElement>('[data-price-strike]');
+        const savingsEl = card.querySelector<HTMLElement>('[data-price-savings]');
+        const termEl = card.querySelector<HTMLElement>('[data-price-term]');
+
+        if (!priceEl) return;
+
+        if (view === 'renewal') {
+          priceEl.textContent = `$${renewal.toFixed(2)}`;
+          if (strikeEl) strikeEl.style.visibility = 'hidden';
+          if (savingsEl) {
+            savingsEl.textContent = 'Renewal rate';
+            savingsEl.classList.remove('pill-mint');
+            savingsEl.classList.add('pill-ink');
+          }
+          if (termEl) termEl.textContent = 'after intro term';
+        } else {
+          priceEl.textContent = `$${intro.toFixed(2)}`;
+          if (strikeEl) strikeEl.style.visibility = 'visible';
+          if (savingsEl) {
+            savingsEl.classList.add('pill-mint');
+            savingsEl.classList.remove('pill-ink');
+            // Restore the server-rendered "Save N%" label
+            savingsEl.textContent = savingsEl.dataset.original ?? savingsEl.textContent;
+          }
+          if (termEl) termEl.textContent = termEl.dataset.original ?? termEl.textContent;
+        }
+      });
+
+      if (note) note.innerHTML = NOTE[view];
+    }
+
+    // Cache the server-rendered savings/term strings so we can restore them
+    root.querySelectorAll<HTMLElement>('[data-price-savings]').forEach((el) => {
+      el.dataset.original = el.textContent ?? '';
+    });
+    root.querySelectorAll<HTMLElement>('[data-price-term]').forEach((el) => {
+      el.dataset.original = el.textContent ?? '';
+    });
+
+    viewButtons.forEach((btn) => {
+      btn.addEventListener('click', () =>
+        setView((btn.dataset.priceView as 'intro' | 'renewal') ?? 'intro'),
+      );
+    });
+  })();
+</script>

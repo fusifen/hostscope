@@ -1,0 +1,177 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../consts';
+import { breadcrumbSchema, graph, organizationSchema } from '../lib/seo';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'How we test', href: '/how-we-test/' },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'WebPage',
+    name: 'How we test Hostinger',
+    url: `${SITE.url}/how-we-test/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+]);
+---
+
+<PageLayout
+  title="How We Test Hostinger"
+  description="Our methodology: what we run, what we measure, how long we observe it, and what we refuse to claim."
+  eyebrow="Methodology"
+  canonical={`${SITE.url}/how-we-test/`}
+  breadcrumbs={breadcrumbs}
+  schema={schema}
+  updated={new Date('2026-09-10')}
+>
+  <p class="lead text-[1.125rem] text-ink-700">
+    We do not run a laboratory. We run real sites on the plans we review, watch what happens, and
+    report what the published limits mean in practice. Here is exactly what that involves — including
+    the parts we cannot measure well and do not pretend to.
+  </p>
+
+  <h2 id="what-we-run">What we run</h2>
+
+  <p>
+    For every plan tier we review, we deploy a standard test site rather than a synthetic benchmark.
+    The stack is deliberately ordinary, because an ordinary stack is what most readers will build:
+  </p>
+
+  <ul>
+    <li>A default WordPress install on the current major version</li>
+    <li>One page builder, one forms plugin, one caching plugin — nothing exotic</li>
+    <li>A WooCommerce variant on the plans we recommend for stores</li>
+    <li>A plain static HTML site as a control, so we can separate host performance from application overhead</li>
+    <li>A Node.js application on the tiers that support it, to check that the advertised support is real</li>
+  </ul>
+
+  <h2 id="what-we-measure">What we measure</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>What</th>
+        <th>How</th>
+        <th>Why it matters</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Uptime</td>
+        <td>An external monitor polling the test site at a fixed interval from two regions</td>
+        <td>Hostinger publishes a 99.9% commitment, which still permits roughly 43 minutes of downtime a month</td>
+      </tr>
+      <tr>
+        <td>Time to first byte</td>
+        <td>Repeated requests against a cached and an uncached page</td>
+        <td>TTFB is where cheap hosting shows its limits before anything else does</td>
+      </tr>
+      <tr>
+        <td>Resource ceiling</td>
+        <td>Loading the site until we hit PHP worker, memory or inode limits</td>
+        <td>This is the number that predicts when you will see a 503 page</td>
+      </tr>
+      <tr>
+        <td>Support quality</td>
+        <td>Timed live-chat requests on real, specific problems</td>
+        <td>Response time is published; whether the answer actually solves the problem is not</td>
+      </tr>
+      <tr>
+        <td>Control panel tasks</td>
+        <td>Timing common jobs: pointing a domain, issuing SSL, creating a mailbox, restoring a backup</td>
+        <td>These are the tasks beginners get stuck on</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 id="what-we-do-not-do">What we do not do</h2>
+
+  <p>
+    We are explicit about the limits of our testing, because a review that overstates its rigour is
+    worse than one that admits its scope.
+  </p>
+
+  <ul>
+    <li>
+      <strong>We do not publish precise benchmark scores.</strong> A single TTFB number from one
+      location on one day is not a meaningful comparison between hosts, and presenting it as one
+      misleads readers. We report ranges and the conditions we observed.
+    </li>
+    <li>
+      <strong>We do not test every data centre.</strong> Performance varies by region. If you are
+      serving an audience far from the data centre you choose, your results will differ from ours.
+    </li>
+    <li>
+      <strong>We do not invent customer quotes.</strong> Every testimonial on this site is either
+      sourced from a public review platform with a link, or it does not appear.
+    </li>
+    <li>
+      <strong>We do not claim long-run statistics from short-run observation.</strong> If we watched a
+      site for 30 days, we say 30 days.
+    </li>
+  </ul>
+
+  <h2 id="scoring">How we score</h2>
+
+  <p>
+    Plan scores are out of 5 and weighted toward the things that change your bill and your workload,
+    not the length of the feature list:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Criterion</th>
+        <th>Weight</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Total cost of ownership (intro plus renewal)</td>
+        <td>30%</td>
+      </tr>
+      <tr>
+        <td>Resource allocation relative to price</td>
+        <td>25%</td>
+      </tr>
+      <tr>
+        <td>Reliability and backup policy</td>
+        <td>20%</td>
+      </tr>
+      <tr>
+        <td>Ease of use and control panel</td>
+        <td>15%</td>
+      </tr>
+      <tr>
+        <td>Support quality</td>
+        <td>10%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    That weighting is why a plan with a spectacular introductory price and a steep renewal rate scores
+    lower here than it does on sites that only quote year one. It is also why Unlimited consistently
+    outscores Premium: not because it is more expensive, but because the extra dollar buys
+    disproportionately more.
+  </p>
+
+  <h2 id="price-verification">How we verify prices</h2>
+
+  <p>
+    Prices, term lengths and renewal rates are recorded directly from hostinger.com and from
+    Hostinger's own published parameters documentation, with the verification date stored alongside
+    the data. The current verification date is <strong>{SITE.pricingVerified}</strong>.
+  </p>
+
+  <p>
+    Where Hostinger's marketing pages and its technical documentation disagree — the most notable
+    case being cloud plans marketed as "unlimited websites" while the parameters table lists a
+    100-site cap — we publish both and say which is which.
+  </p>
+</PageLayout>

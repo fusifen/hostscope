@@ -1,7 +1,8 @@
 {
-  "name": "stale-star",
+  "name": "hostscope",
   "type": "module",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "private": true,
   "engines": {
     "node": ">=22.12.0"
   },
@@ -9,10 +10,27 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check:cms": "node scripts/validate-cms-config.mjs && node scripts/check-cms-schema-sync.mjs",
+    "check:content": "node scripts/check-content.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "check:deploy": "node scripts/check-deploy-readiness.mjs",
+    "check": "npm run check:deploy && npm run check:cms && npm run check:content",
+    "verify": "npm run check && npm run build && npm run check:links",
+    "icons": "node scripts/generate-icons.mjs",
+    "normalize:reading-time": "node scripts/normalize-reading-time.mjs",
+    "report:lengths": "node scripts/report-article-lengths.mjs"
   },
   "dependencies": {
-    "astro": "^7.3.2"
+    "@astrojs/sitemap": "^3.7.4",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.2",
+    "gsap": "^3.15.0",
+    "sharp": "^0.35.4",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.3.2"
   },
   "allowScripts": {
     "esbuild": true

@@ -1,0 +1,292 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import ArticleListing from '../../components/ArticleListing.astro';
+import FAQ from '../../components/FAQ.astro';
+import { SITE, CATEGORIES, CATEGORY_LIST, type CategoryKey } from '../../consts';
+import { breadcrumbSchema, faqSchema, graph, organizationSchema } from '../../lib/seo';
+
+export async function getStaticPaths() {
+  // Every category gets a page, even if it currently has no articles. The
+  // filter chips in ArticleListing and the home page link to all of them, so
+  // skipping empty ones produces 404s from navigation that looks legitimate.
+  // `comparison` is the case in point: it has no *articles* because head-to-head
+  // content lives in the `comparisons` collection, and the page renders those.
+  return CATEGORY_LIST.map((category) => ({
+    params: { category: category.key },
+    props: { category },
+  }));
+}
+
+const { category } = Astro.props;
+const key = category.key as CategoryKey;
+
+const allArticles = (await getCollection('articles')).filter((a) => !a.data.draft);
+const articles = allArticles
+  .filter((a) => a.data.category === key)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+// The comparison category is backed by the `comparisons` collection instead of
+// by articles tagged `comparison`.
+const comparisons =
+  key === 'comparison'
+    ? (await getCollection('comparisons')).sort((a, b) =>
+        a.data.competitor.localeCompare(b.data.competitor),
+      )
+    : [];
+
+const itemCount = key === 'comparison' ? comparisons.length : articles.length;
+const itemNoun = key === 'comparison' ? 'comparison' : 'article';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Articles', href: '/blog/' },
+  { name: category.label, href: `/category/${key}/` },
+];
+
+const CATEGORY_INTRO: Record<CategoryKey, { headline: string; body: string }> = {
+  review: {
+    headline: 'Hostinger reviews that include the numbers other sites leave out',
+    body: 'We test each Hostinger plan on real sites and publish the renewal prices, resource ceilings and support response times alongside the scores. If a plan has a weakness, it is in the review.',
+  },
+  tutorial: {
+    headline: 'Step-by-step Hostinger tutorials',
+    body: 'Everything from pointing a domain and installing WordPress to setting up email authentication and hardening a VPS. Written for people who have never opened hPanel before.',
+  },
+  guide: {
+    headline: 'Hostinger buying guides',
+    body: 'How to choose the right plan, how to pay the least for it, and how to read a hosting price table without being misled by the headline number.',
+  },
+  deals: {
+    headline: 'Hostinger deals, promo codes and pricing history',
+    body: 'What is actually on offer right now, which codes work, and what each plan has cost over time — so you can tell a real discount from a repackaged one.',
+  },
+  comparison: {
+    headline: 'Hostinger compared with the alternatives',
+    body: 'Head-to-head breakdowns against Bluehost, SiteGround, GoDaddy, Namecheap, HostGator and Cloudways, scored row by row with the competitor winning where it genuinely wins.',
+  },
+  troubleshooting: {
+    headline: 'Fixing Hostinger problems',
+    body: 'The errors Hostinger customers hit most often — 503 pages, slow sites, emails in spam, broken SSL, database failures — with the fix and the root cause.',
+  },
+};
+
+const intro = CATEGORY_INTRO[key];
+
+const faqsByCategory: Record<CategoryKey, { question: string; answer: string }[]> = {
+  review: [
+    {
+      question: 'Do you accept payment for positive reviews?',
+      answer:
+        'No. HostScope earns affiliate commission when someone buys through our links, which is disclosed on every page. No host can pay us to change a score, remove a criticism or publish a review we did not write.',
+    },
+    {
+      question: 'How do you test Hostinger?',
+      answer:
+        'We run live sites on the plans we review, track uptime and response times, and measure the practical effect of the published resource limits — PHP worker counts, memory ceilings and inode caps. Our methodology page explains the process in full.',
+    },
+    {
+      question: 'Why do your scores differ from other review sites?',
+      answer:
+        'Because we weight total cost of ownership and resource limits more heavily than feature lists. A plan with a spectacular intro price and a steep renewal rate scores worse here than it does on sites that only quote year-one pricing.',
+    },
+  ],
+  tutorial: [
+    {
+      question: 'Do these tutorials work on any Hostinger plan?',
+      answer:
+        'Most do. Domain, DNS, SSL, email and WordPress instructions apply across web, cloud and builder plans. VPS-specific tutorials only apply to KVM plans, because those are self-managed.',
+    },
+    {
+      question: 'Are the screenshots current?',
+      answer:
+        'We describe the flow and the menu grouping rather than exact pixel positions, because Hostinger updates hPanel regularly. Where a label may have changed, we say so.',
+    },
+    {
+      question: 'I am stuck halfway through. What should I do?',
+      answer:
+        'Hostinger support is available 24/7 by live chat in more than ten languages, with a median first response of around a minute for English requests. For anything involving data loss, contact support before you experiment.',
+    },
+  ],
+  guide: [
+    {
+      question: 'Which Hostinger plan is best overall?',
+      answer:
+        'For most people, Unlimited at $3.99/mo on the 48-month term. It doubles the CPU allocation of Premium, adds daily backups with one-click restore, a dedicated IP and unlimited websites for one dollar a month more.',
+    },
+    {
+      question: 'Is a long term always the right choice?',
+      answer:
+        'Only if you are confident you will keep the site. The 48-month term gives the lowest monthly rate and locks it, but you pay the whole amount upfront. If the project is an experiment, a shorter term costs more per month and less in total risk.',
+    },
+  ],
+  deals: [
+    {
+      question: 'Do Hostinger coupon codes stack with the plan discount?',
+      answer:
+        'Usually not in the way people expect. The large discount is built into the long-term plan price itself. A coupon code typically adds a smaller extra percentage or an add-on rather than halving an already discounted rate.',
+    },
+    {
+      question: 'Can I get a discount on renewal?',
+      answer:
+        'Renewal prices are not discountable in the same way as new purchases. The practical lever is to buy the longest term you are comfortable with so the intro rate lasts longer, and to decide before renewal whether the new price is still worth it.',
+    },
+  ],
+  comparison: [
+    {
+      question: 'How do you decide which host wins a comparison?',
+      answer:
+        'Row by row, on the criteria that change the outcome for a buyer: total cost of ownership, resource allocation, backup frequency, migration support, control panel and support quality. Competitors win rows where they genuinely lead.',
+    },
+  ],
+  troubleshooting: [
+    {
+      question: 'Will Hostinger support fix these problems for me?',
+      answer:
+        'Support will help with anything on the hosting side — server errors, DNS, SSL issuance, email configuration. They will not debug your WordPress plugins or theme code, which is where most of these problems originate.',
+    },
+    {
+      question: 'Do these fixes require technical knowledge?',
+      answer:
+        'Most are done through hPanel with no command line involved. Where a fix needs file editing or SSH, we say so up front so you can decide whether to try it or ask support.',
+    },
+  ],
+};
+
+const faqs = faqsByCategory[key] ?? [];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'CollectionPage',
+    name: `${category.label} — HostScope`,
+    description: category.description,
+    url: `${SITE.url}/category/${key}/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+  ...(faqs.length ? [faqSchema(faqs)] : []),
+]);
+---
+
+<BaseLayout
+  title={`Hostinger ${category.label} — ${itemCount} ${itemCount === 1 ? itemNoun : `${itemNoun}s`}`}
+  description={intro.body.slice(0, 155)}
+  canonical={`${SITE.url}/category/${key}/`}
+  schema={schema}
+  keywords={[`hostinger ${category.label.toLowerCase()}`, `hostinger ${key}`]}
+>
+  <header class="border-b border-line bg-white">
+    <div class="container-page py-8 lg:py-10">
+      <Breadcrumbs items={breadcrumbs} />
+      <div class="mt-5 max-w-3xl">
+        <p class="eyebrow">{category.label} · {itemCount} {itemCount === 1 ? itemNoun : `${itemNoun}s`}</p>
+        <h1 class="mt-3 text-[1.875rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-[2.5rem]">
+          {intro.headline}
+        </h1>
+        <p class="mt-4 text-[1.0625rem] leading-relaxed text-ink-600">{intro.body}</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="container-page py-10 lg:py-12">
+    {
+      key === 'comparison' ? (
+        <div class="grid gap-5 md:grid-cols-2">
+          {comparisons.map((comparison) => {
+            const hostingerWins = comparison.data.rows.filter((r) => r.edge === 'hostinger').length;
+            const competitorWins = comparison.data.rows.filter(
+              (r) => r.edge === 'competitor',
+            ).length;
+            return (
+              <a
+                href={`/compare/${comparison.id}/`}
+                class="card card-hover group flex flex-col p-5"
+                data-reveal
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-brand-700 uppercase">
+                      Head to head
+                    </p>
+                    <h2 class="mt-1.5 text-lg font-extrabold tracking-[-0.02em] text-ink-950">
+                      Hostinger vs {comparison.data.competitor}
+                    </h2>
+                  </div>
+                  <span class="shrink-0 rounded-lg bg-brand-50 px-2.5 py-1.5 text-[0.6875rem] font-bold text-brand-700">
+                    {comparison.data.winner}
+                  </span>
+                </div>
+
+                <p class="mt-3 flex-1 text-[0.875rem] leading-relaxed text-ink-600">
+                  {comparison.data.verdict.replace(/\s+/g, ' ').trim()}
+                </p>
+
+                <div class="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-4 text-center">
+                  <div>
+                    <p class="text-lg font-extrabold text-brand-700">{hostingerWins}</p>
+                    <p class="text-[0.625rem] font-semibold text-ink-500">Hostinger</p>
+                  </div>
+                  <div>
+                    <p class="text-lg font-extrabold text-ink-400">
+                      {comparison.data.rows.length - hostingerWins - competitorWins}
+                    </p>
+                    <p class="text-[0.625rem] font-semibold text-ink-500">Tie</p>
+                  </div>
+                  <div>
+                    <p class="text-lg font-extrabold text-ink-700">{competitorWins}</p>
+                    <p class="text-[0.625rem] font-semibold text-ink-500">
+                      {comparison.data.competitor}
+                    </p>
+                  </div>
+                </div>
+
+                <span class="mt-4 inline-flex items-center gap-1.5 text-[0.8125rem] font-bold text-brand-700">
+                  Read the full comparison
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true">
+                    <path d="M3 8h9m0 0-3.5-3.5M12 8l-3.5 3.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <ArticleListing
+          articles={articles}
+          allArticles={allArticles}
+          currentPage={1}
+          totalPages={1}
+          totalCount={articles.length}
+          activeCategory={key}
+        />
+      )
+    }
+
+    {
+      faqs.length > 0 && (
+        <div class="mt-14 max-w-3xl">
+          <FAQ faqs={faqs} title={`${category.label} — common questions`} />
+        </div>
+      )
+    }
+
+    <div class="mt-12">
+      <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+        Browse other sections
+      </p>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        {
+          CATEGORY_LIST.filter((c) => c.key !== key).map((c) => (
+            <li>
+              <a href={`/category/${c.key}/`} class="btn btn-outline btn-sm">
+                {c.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</BaseLayout>

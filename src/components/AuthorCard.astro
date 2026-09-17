@@ -1,0 +1,54 @@
+---
+import { EDITORS, type EditorKey } from '../consts';
+
+export interface Props {
+  author: string;
+  /** Show the longer bio. */
+  detailed?: boolean;
+  /** ISO date the piece was last updated. */
+  updated?: Date;
+  class?: string;
+}
+
+const { author, detailed = false, updated, class: className = '' } = Astro.props;
+const editor = EDITORS[author as EditorKey] ?? EDITORS['maya-ross'];
+
+const initials = editor.name
+  .split(' ')
+  .map((part) => part[0])
+  .join('');
+
+const hue = { 'maya-ross': '#673DE6', 'daniel-okafor': '#0E7490', 'priya-nair': '#B45309' }[author] ?? '#673DE6';
+---
+
+<div class={`flex items-start gap-3.5 ${className}`}>
+  <span
+    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[0.875rem] font-bold text-white"
+    style={`background:linear-gradient(135deg, ${hue}, ${hue}cc)`}
+    aria-hidden="true"
+  >
+    {initials}
+  </span>
+  <div class="min-w-0">
+    <p class="text-[0.875rem] font-bold text-ink-900">{editor.name}</p>
+    <p class="text-[0.75rem] font-medium text-brand-700">{editor.role}</p>
+    {
+      detailed && <p class="mt-2 text-[0.8125rem] leading-relaxed text-ink-600">{editor.bio}</p>
+    }
+    {
+      updated && (
+        <p class="mt-1.5 text-[0.75rem] text-ink-400">
+          Last updated{' '}
+          <time datetime={updated.toISOString()}>
+            {updated.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              timeZone: 'UTC',
+            })}
+          </time>
+        </p>
+      )
+    }
+  </div>
+</div>

@@ -1,0 +1,177 @@
+---
+/**
+ * ArticleCTA — the contextual offer card placed inside and at the end of
+ * articles. It shows the plan the article is actually about, so the offer
+ * always matches the reader's intent.
+ */
+import type { CollectionEntry } from 'astro:content';
+import { affiliateUrl, AFFILIATE } from '../consts';
+import { discountPercent, termTotal } from '../lib/pricing';
+
+export interface Props {
+  plan?: CollectionEntry<'plans'>;
+  variant?: 'inline' | 'footer' | 'sidebar';
+  placement?: string;
+  headline?: string;
+  body?: string;
+  class?: string;
+}
+
+const {
+  plan,
+  variant = 'inline',
+  placement = 'article-inline',
+  headline,
+  body,
+  class: className = '',
+} = Astro.props;
+
+const slug = plan?.id;
+const href = affiliateUrl({ placement, plan: slug, campaign: variant });
+
+const name = plan?.data.name ?? 'Hostinger';
+const promo = plan?.data.pricing.promoMonthly ?? 2.99;
+const regular = plan?.data.pricing.regularMonthly ?? 11.99;
+const renewal = plan?.data.pricing.renewalMonthly ?? 10.99;
+const termMonths = plan?.data.pricing.termMonths ?? 48;
+const termLabel = plan?.data.pricing.termLabel ?? '48 months';
+const off = discountPercent(regular, promo);
+const total = termTotal(promo, termMonths);
+
+const defaultHeadline =
+  variant === 'footer'
+    ? `Ready to go with ${name}?`
+    : `Thinking about the ${name} plan?`;
+const defaultBody =
+  variant === 'footer'
+    ? `${name} currently starts at $${promo.toFixed(2)}/mo on the ${termLabel} term — $${total.toFixed(2)} upfront, free domain and SSL included, and a 30-day money-back window if it isn't right for you.`
+    : `It's $${promo.toFixed(2)}/mo on the ${termLabel} term right now (${off}% off the $${regular.toFixed(2)} regular rate). Renews at $${renewal.toFixed(2)}/mo after that.`;
+---
+
+{
+  variant === 'sidebar' ? (
+    <aside
+      class={`rounded-2xl border border-brand-200 bg-gradient-to-b from-brand-50 to-white p-4 ${className}`}
+    >
+      <p class="eyebrow !text-[0.625rem]">Current deal</p>
+      <p class="mt-2 text-[0.9375rem] font-extrabold leading-snug text-ink-950">
+        {name} from ${promo.toFixed(2)}/mo
+      </p>
+      <p class="mt-1.5 text-[0.75rem] leading-relaxed text-ink-600">
+        {off}% off the ${regular.toFixed(2)} regular rate. Free domain, free SSL, 30-day refund
+        window.
+      </p>
+      <a
+        href={href}
+        target="_blank"
+        rel="sponsored nofollow noopener"
+        data-affiliate="true"
+        data-placement={placement}
+        data-plan={slug}
+        class="btn btn-primary btn-sm mt-3 w-full"
+      >
+        Claim deal
+      </a>
+      <p class="mt-2 text-center text-[0.625rem] text-ink-400">
+        Code <strong class="font-semibold text-ink-600">{AFFILIATE.defaultCoupon}</strong> for {AFFILIATE.couponDiscount}% off · affiliate
+        link
+      </p>
+    </aside>
+  ) : (
+    <aside
+      class:list={[
+        'not-prose overflow-hidden rounded-2xl border',
+        variant === 'footer'
+          ? 'border-brand-300 bg-gradient-to-br from-brand-700 via-brand-800 to-brand-950 text-white shadow-[var(--shadow-pop)]'
+          : 'border-brand-200 bg-gradient-to-br from-brand-50 to-white',
+        className,
+      ]}
+      data-reveal
+    >
+      <div class="p-5 sm:p-6">
+        <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
+            <p
+              class:list={[
+                'eyebrow',
+                variant === 'footer' ? '!text-brand-200' : '!text-brand-700',
+              ]}
+            >
+              {variant === 'footer' ? 'Recommended next step' : 'Sponsor note'}
+            </p>
+            <h3
+              class:list={[
+                'mt-2 text-lg font-extrabold leading-snug tracking-[-0.02em] sm:text-xl',
+                variant === 'footer' && '!text-white',
+              ]}
+            >
+              {headline ?? defaultHeadline}
+            </h3>
+            <p
+              class:list={[
+                'mt-2 max-w-xl text-[0.875rem] leading-relaxed',
+                variant === 'footer' ? 'text-brand-100' : 'text-ink-600',
+              ]}
+            >
+              {body ?? defaultBody}
+            </p>
+          </div>
+
+          <div class="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+            <div class="flex items-baseline gap-1.5">
+              <span
+                class:list={[
+                  'text-[2rem] font-extrabold leading-none tracking-[-0.03em]',
+                  variant === 'footer' ? '!text-white' : 'text-ink-950',
+                ]}
+              >
+                ${promo.toFixed(2)}
+              </span>
+              <span
+                class:list={[
+                  'text-[0.8125rem] font-semibold',
+                  variant === 'footer' ? 'text-brand-200' : 'text-ink-500',
+                ]}
+              >
+                /mo
+              </span>
+            </div>
+            <span
+              class:list={[
+                'pill',
+                variant === 'footer' ? 'bg-white/15 !text-white' : 'pill-mint',
+              ]}
+            >
+              Save {off}%
+            </span>
+            <a
+              href={href}
+              target="_blank"
+              rel="sponsored nofollow noopener"
+              data-affiliate="true"
+              data-placement={placement}
+              data-plan={slug}
+              class:list={[
+                'btn btn-lg mt-1',
+                variant === 'footer' ? 'btn-mint' : 'btn-primary',
+              ]}
+            >
+              Claim the {name} deal
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4 opacity-80" aria-hidden="true">
+                <path d="M7 4h9v9M16 4 6.5 13.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+            <p
+              class:list={[
+                'text-[0.625rem]',
+                variant === 'footer' ? 'text-brand-200/80' : 'text-ink-400',
+              ]}
+            >
+              Affiliate link · same price for you
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+}

@@ -1,0 +1,98 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../consts';
+import { breadcrumbSchema, graph, organizationSchema } from '../lib/seo';
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Contact', href: '/contact/' },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'ContactPage',
+    name: 'Contact HostScope',
+    url: `${SITE.url}/contact/`,
+    isPartOf: { '@id': `${SITE.url}/#website` },
+  },
+]);
+---
+
+<PageLayout
+  title="Contact HostScope"
+  description="Corrections, questions and press enquiries. What we can help with, what we cannot, and where to go for Hostinger support."
+  eyebrow="Get in touch"
+  canonical={`${SITE.url}/contact/`}
+  breadcrumbs={breadcrumbs}
+  schema={schema}
+>
+  <p class="lead text-[1.125rem] text-ink-700">
+    We read everything that arrives and reply to most of it within two business days.
+  </p>
+
+  <div class="not-prose mt-6 grid gap-4 sm:grid-cols-3">
+    {
+      [
+        {
+          title: 'Corrections',
+          email: SITE.publisher.email,
+          body: 'Spotted a price that has changed or a spec we got wrong? Tell us the page and the detail.',
+        },
+        {
+          title: 'Editorial',
+          email: 'editors@hostscope.io',
+          body: 'Questions about our methodology, or a counter-argument you think we should publish.',
+        },
+        {
+          title: 'Everything else',
+          email: SITE.publisher.email,
+          body: 'Press, partnerships that do not involve paid placement, or general feedback.',
+        },
+      ].map((item) => (
+        <div class="rounded-2xl border border-line bg-white p-5">
+          <h2 class="text-[0.9375rem] font-bold text-ink-900">{item.title}</h2>
+          <a
+            href={`mailto:${item.email}`}
+            class="mt-1.5 block text-[0.8125rem] font-semibold text-brand-700 hover:underline"
+          >
+            {item.email}
+          </a>
+          <p class="mt-2 text-[0.8125rem] leading-relaxed text-ink-600">{item.body}</p>
+        </div>
+      ))
+    }
+  </div>
+
+  <h2 id="support">If you need hosting support</h2>
+
+  <p>
+    HostScope is not Hostinger, and we cannot access your account, reset your password, process a
+    refund, or fix your website. If you need help with an account or a technical problem, contact
+    Hostinger directly — support is available 24/7 by live chat in more than ten languages, and the
+    median first response for English requests is around one minute.
+  </p>
+
+  <p>
+    If you are troubleshooting, our guides may save you a support ticket: start with{' '}
+    <a href="/category/troubleshooting/">the troubleshooting archive</a>, which covers 503 errors,
+    slow sites, email deliverability, SSL problems and database connection failures.
+  </p>
+
+  <h2 id="postal">Postal address</h2>
+
+  <p>
+    {SITE.publisher.legalName}<br />
+    {SITE.publisher.address}
+  </p>
+
+  <h2 id="response">What we cannot help with</h2>
+
+  <ul>
+    <li>Account, billing or refund issues — those are Hostinger's to resolve.</li>
+    <li>Website debugging for individual readers. We publish guides instead.</li>
+    <li>Requests to remove criticism of a product. We will correct factual errors, but we do not remove opinions.</li>
+    <li>Paid placements, sponsored posts and link insertions. The answer is always no.</li>
+  </ul>
+</PageLayout>

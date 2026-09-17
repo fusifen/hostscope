@@ -1,0 +1,310 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import FAQ from '../components/FAQ.astro';
+import PlanCard from '../components/PlanCard.astro';
+import AffiliateButton from '../components/AffiliateButton.astro';
+import { SITE, AFFILIATE } from '../consts';
+import { discountPercent, termTotal, renewalIncrease } from '../lib/pricing';
+import { breadcrumbSchema, faqSchema, graph, organizationSchema } from '../lib/seo';
+
+const plans = (await getCollection('plans')).sort(
+  (a, b) => a.data.pricing.promoMonthly - b.data.pricing.promoMonthly,
+);
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Deals', href: '/coupons/' },
+];
+
+const deals = plans.map((plan) => ({
+  plan,
+  off: discountPercent(plan.data.pricing.regularMonthly, plan.data.pricing.promoMonthly),
+  total: termTotal(plan.data.pricing.promoMonthly, plan.data.pricing.termMonths),
+  jump: renewalIncrease(plan.data.pricing.promoMonthly, plan.data.pricing.renewalMonthly),
+}));
+
+const bestDiscount = [...deals].sort((a, b) => b.off - a.off)[0];
+const cheapest = deals[0];
+
+const faqs = [
+  {
+    question: 'Is there a Hostinger promo code that gives an extra discount?',
+    answer: `Yes — the code ${AFFILIATE.defaultCoupon} takes ${AFFILIATE.couponDiscount}% off the order total at checkout. It stacks on top of the built-in long-term plan discount rather than replacing it, and it is applied by the promo box on the payment step. Always check the order summary before paying to confirm the total actually dropped.`,
+  },
+  {
+    question: 'What is the single best Hostinger deal right now?',
+    answer: `The deepest discount in the current lineup is on the ${bestDiscount.plan.data.name} plan at ${bestDiscount.off}% off, which brings it to $${bestDiscount.plan.data.pricing.promoMonthly.toFixed(2)}/mo on the ${bestDiscount.plan.data.pricing.termLabel} term. That said, the biggest saving per dollar spent is usually the Unlimited plan, where one extra dollar a month roughly doubles your resources.`,
+  },
+  {
+    question: 'Should I wait for Black Friday?',
+    answer:
+      'Hosting promotions do deepen around late November, but the difference is usually a few percentage points on the longest terms, not a transformation. If you need a site live now, waiting three months costs you more in lost time than you would save.',
+  },
+  {
+    question: 'Do these deals apply to renewals?',
+    answer:
+      'No. Introductory pricing applies to the first term only. When it ends you move to the standard renewal rate — $10.99/mo on Premium, $16.99/mo on Unlimited and $25.99/mo on Cloud Startup. Plan for that number, not the headline one.',
+  },
+  {
+    question: 'How do I know these prices are current?',
+    answer: `We check every price in this table against hostinger.com and record the date. The current data was verified on ${SITE.pricingVerified}. Hostinger changes promotional pricing without notice, so the checkout page is always the final word.`,
+  },
+  {
+    question: 'Is the 48-month term a trap?',
+    answer:
+      'It is a commitment, not a trap — but understand what you are agreeing to. You pay the entire four years upfront, the price is locked for that period, and the 30-day money-back guarantee gives you a month to change your mind. If you are not confident the project will last four years, take a shorter term.',
+  },
+];
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  {
+    '@type': 'OfferCatalog',
+    name: 'Hostinger deals and promotional pricing',
+    url: `${SITE.url}/coupons/`,
+    itemListElement: deals.map(({ plan, off }) => ({
+      '@type': 'Offer',
+      name: `${plan.data.name} — ${off}% off`,
+      description: plan.data.tagline,
+      url: `${SITE.url}/plans/${plan.id}/`,
+      priceCurrency: 'USD',
+      price: plan.data.pricing.promoMonthly.toFixed(2),
+    })),
+  },
+  faqSchema(faqs),
+]);
+---
+
+<BaseLayout
+  title="Hostinger Deals and Promo Codes 2026 (Verified)"
+  description={`Every current Hostinger deal in one place — up to ${bestDiscount.off}% off, verified ${SITE.pricingVerified}. Includes the renewal prices these promotions switch to afterwards.`}
+  canonical={`${SITE.url}/coupons/`}
+  schema={schema}
+  image="/og/coupons.png"
+  keywords={['hostinger coupon', 'hostinger promo code', 'hostinger discount', 'hostinger deal']}
+>
+  <header class="border-b border-line bg-white">
+    <div class="container-page py-8 lg:py-10">
+      <Breadcrumbs items={breadcrumbs} />
+      <div class="mt-5 max-w-3xl">
+        <p class="eyebrow">Verified {SITE.pricingVerified}</p>
+        <h1 class="mt-3 text-[1.875rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-[2.5rem]">
+          Current Hostinger deals — and what they cost you after year one
+        </h1>
+        <p class="mt-4 text-[1.0625rem] leading-relaxed text-ink-600">
+          Every discount currently live on hostinger.com, ranked by depth. We show the intro price,
+          the total you pay upfront and the renewal rate side by side, because a deal is only a deal
+          if it still makes sense in year two.
+        </p>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <AffiliateButton
+          placement="coupon-page"
+          campaign="deals-hero"
+          label="Claim the best current deal"
+          sublabel={`Up to ${bestDiscount.off}% off`}
+          size="xl"
+          pulse
+        />
+        <a href="/tools/hosting-cost-calculator/" class="btn btn-outline btn-xl">
+          Check the true cost first
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Headline stats -->
+  <section class="border-b border-line bg-canvas">
+    <div class="container-page py-6">
+      <dl class="grid gap-4 sm:grid-cols-4">
+        {
+          [
+            { label: 'Deepest discount', value: `${bestDiscount.off}% off`, note: bestDiscount.plan.data.name },
+            { label: 'Lowest price', value: `$${cheapest.plan.data.pricing.promoMonthly.toFixed(2)}/mo`, note: cheapest.plan.data.name },
+            { label: 'Free domain', value: '1 year', note: 'Included on all annual+ plans' },
+            { label: 'Money-back', value: '30 days', note: 'On every plan' },
+          ].map((item) => (
+            <div class="rounded-xl border border-line bg-white p-4">
+              <dt class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">{item.label}</dt>
+              <dd class="mt-1.5 text-xl font-extrabold tracking-[-0.03em] text-ink-950">{item.value}</dd>
+              <dd class="mt-1 text-[0.75rem] text-ink-500">{item.note}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </section>
+
+  <!-- Coupon card -->
+  <section class="container-page py-10">
+    <div class="grid gap-6 lg:grid-cols-[1.1fr_1fr] lg:items-stretch">
+      <div class="rounded-2xl border-2 border-dashed border-brand-300 bg-gradient-to-br from-brand-50 to-white p-6">
+        <div class="flex flex-wrap items-center gap-2">
+          <p class="eyebrow !mb-0">Promo code</p>
+          <span class="pill pill-mint !normal-case !tracking-normal">
+            {AFFILIATE.couponDiscount}% off
+          </span>
+        </div>
+        <p class="mt-3 text-[0.875rem] leading-relaxed text-ink-600">
+          Enter this code in the promo box on Hostinger's checkout page to take an extra{' '}
+          <strong class="font-bold text-ink-900">{AFFILIATE.couponDiscount}% off</strong> the order
+          total, on top of the built-in plan discount. Check the order summary afterwards — if the
+          total has not changed, the code has expired and the plan discount is what you are getting.
+        </p>
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <code
+            class="rounded-xl border-2 border-brand-300 bg-white px-5 py-3 font-mono text-xl font-bold tracking-[0.1em] text-brand-800"
+            data-coupon-code
+          >
+            {AFFILIATE.defaultCoupon}
+          </code>
+          <button
+            type="button"
+            data-copy-coupon
+            class="btn btn-primary btn-md"
+            data-copy-label="Copy code"
+          >
+            Copy code
+          </button>
+        </div>
+        <p class="mt-3 text-[0.6875rem] text-ink-400">
+          We update this code when it changes. If it stops working, the plan discount below is still
+          live.
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-line bg-white p-6">
+        <h2 class="text-[0.9375rem] font-bold text-ink-900">How Hostinger discounts actually work</h2>
+        <ol class="mt-4 space-y-3">
+          {
+            [
+              'The headline discount is built into the long-term plan price — it is not a coupon you apply.',
+              'Longer terms get deeper discounts. 48 months is always the cheapest per month.',
+              'The whole term is charged upfront, so "per month" is the total divided by the number of months.',
+              'Renewal pricing is separate and always higher — check it before committing.',
+              `A coupon like ${AFFILIATE.defaultCoupon} adds a further ${AFFILIATE.couponDiscount}% off the order total, and can expire without notice.`,
+            ].map((item, i) => (
+              <li class="flex gap-3 text-[0.875rem] leading-relaxed text-ink-600">
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-[0.75rem] font-bold text-brand-700">
+                  {i + 1}
+                </span>
+                <span>{item}</span>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- Deal table -->
+  <section class="section pt-0">
+    <div class="container-page">
+      <SectionHeading
+        eyebrow="All current offers"
+        title="Every Hostinger discount, ranked"
+        description="Sorted by how deep the discount is. The renewal column is the one most deal pages omit."
+      />
+
+      <div class="mt-8 scroll-x rounded-2xl border border-line bg-white">
+        <table class="w-full min-w-[52rem] border-collapse text-[0.8125rem]">
+          <caption class="sr-only">Current Hostinger promotional pricing by plan</caption>
+          <thead>
+            <tr class="border-b border-line bg-ink-50">
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">Plan</th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">Discount</th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">Intro price</th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">Upfront total</th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">Renews at</th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">Term</th>
+              <th scope="col" class="px-4 py-3.5 text-left text-[0.6875rem] font-bold tracking-[0.06em] text-ink-500 uppercase">Claim</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              deals.map(({ plan, off, total }, i) => (
+                <tr class:list={['border-b border-line last:border-0', i % 2 === 1 && 'bg-ink-50/40']}>
+                  <th scope="row" class="px-4 py-3 text-left">
+                    <a href={`/plans/${plan.id}/`} class="font-semibold text-ink-900 hover:text-brand-700 hover:underline">
+                      {plan.data.name}
+                    </a>
+                    {plan.data.badge && (
+                      <span class="ml-2 pill pill-brand !px-1.5 !py-0.5 !text-[0.5625rem]">{plan.data.badge}</span>
+                    )}
+                  </th>
+                  <td class="px-4 py-3">
+                    <span class="pill pill-mint !normal-case !tracking-normal">{off}% off</span>
+                  </td>
+                  <td class="px-4 py-3 font-bold text-ink-900">
+                    ${plan.data.pricing.promoMonthly.toFixed(2)}/mo
+                  </td>
+                  <td class="px-4 py-3 text-ink-600">${total.toFixed(2)}</td>
+                  <td class="px-4 py-3 text-ink-600">${plan.data.pricing.renewalMonthly.toFixed(2)}/mo</td>
+                  <td class="px-4 py-3 text-ink-600">{plan.data.pricing.termLabel}</td>
+                  <td class="px-4 py-3">
+                    <a
+                      href={`/plans/${plan.id}/`}
+                      class="text-[0.75rem] font-bold text-brand-700 hover:underline"
+                    >
+                      Details →
+                    </a>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-8 grid gap-5 md:grid-cols-3">
+        {
+          plans
+            .filter((p) => p.data.featured)
+            .slice(0, 3)
+            .map((plan) => <PlanCard plan={plan} />)
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="border-t border-line bg-white section">
+    <div class="container-page max-w-3xl">
+      <SectionHeading eyebrow="Deal questions" title="Before you apply a code" align="center" class="mx-auto" />
+      <FAQ faqs={faqs} title="Hostinger deals FAQ" class="mt-9" />
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  document.querySelector('[data-copy-coupon]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    const code = document.querySelector<HTMLElement>('[data-coupon-code]')?.textContent?.trim();
+    if (!code) return;
+
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      // Clipboard API blocked (http, permissions) — fall back to selection
+      const range = document.createRange();
+      const target = document.querySelector('[data-coupon-code]');
+      if (target) {
+        range.selectNodeContents(target);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    }
+
+    const original = button.dataset.copyLabel ?? 'Copy code';
+    button.textContent = 'Copied';
+    window.setTimeout(() => {
+      button.textContent = original;
+    }, 1800);
+  });
+</script>

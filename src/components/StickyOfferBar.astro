@@ -1,0 +1,147 @@
+---
+/**
+ * StickyOfferBar — a persistent, dismissible conversion bar.
+ *
+ * It appears after the reader scrolls past the hero, hides while the footer
+ * CTA is on screen (so the page never shows two competing offers at once),
+ * and remembers dismissal in sessionStorage for the rest of the visit.
+ */
+import { AFFILIATE, affiliateUrl } from '../consts';
+
+export interface Props {
+  /** Headline shown in the bar. */
+  message?: string;
+  /** Price badge. */
+  price?: string;
+  /** Optional countdown-style urgency line. */
+  urgency?: string;
+  placement?: string;
+}
+
+const {
+  message = 'Hostinger 48-month plan',
+  price = '$2.99/mo',
+  urgency = 'Free domain + SSL included',
+  placement = 'sticky-bar',
+} = Astro.props;
+
+const href = affiliateUrl({ placement, campaign: 'sticky' });
+---
+
+<div
+  id="sticky-offer"
+  class="pointer-events-none fixed inset-x-0 bottom-0 z-40 translate-y-full px-3 pb-3 opacity-0 transition-all duration-400 sm:px-4 sm:pb-4"
+  data-sticky-offer
+  data-coupon={AFFILIATE.defaultCoupon}
+  aria-hidden="true"
+>
+  <div
+    class="pointer-events-auto mx-auto flex max-w-4xl flex-col gap-3 rounded-2xl border border-brand-200 bg-white/95 p-3 shadow-[var(--shadow-pop)] backdrop-blur-xl sm:flex-row sm:items-center sm:gap-4 sm:p-3.5"
+  >
+    <div class="flex min-w-0 flex-1 items-center gap-3">
+      <span
+        class="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-800 text-white sm:flex"
+        aria-hidden="true"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-5 w-5">
+          <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z" stroke-linecap="round" stroke-linejoin="round"
+          ></path>
+        </svg>
+      </span>
+      <div class="min-w-0">
+        <p class="truncate text-[0.8125rem] font-semibold text-ink-900 sm:text-sm">
+          {message}
+          <span class="ml-1 font-extrabold text-brand-700">{price}</span>
+        </p>
+        <p class="mt-0.5 truncate text-[0.6875rem] text-ink-500">
+          {urgency} · code <strong class="font-bold text-ink-700">{AFFILIATE.defaultCoupon}</strong> for {AFFILIATE.couponDiscount}% off
+        </p>
+      </div>
+    </div>
+
+    <div class="flex shrink-0 items-center gap-2">
+      <a
+        href={href}
+        target="_blank"
+        rel="sponsored nofollow noopener"
+        data-affiliate="true"
+        data-placement={placement}
+        class="btn btn-primary btn-sm flex-1 sm:flex-none"
+      >
+        Claim deal
+        <svg class="h-3.5 w-3.5 opacity-80" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+          <path d="M7 4h9v9M16 4 6.5 13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </a>
+      <button
+        type="button"
+        data-sticky-dismiss
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+        aria-label="Dismiss offer bar"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const bar = document.querySelector<HTMLElement>('[data-sticky-offer]');
+    if (!bar) return;
+
+    const STORAGE_KEY = 'hs:sticky-dismissed';
+
+    // Respect a previous dismissal for this session
+    try {
+      if (sessionStorage.getItem(STORAGE_KEY) === '1') return;
+    } catch {
+      /* storage blocked — carry on */
+    }
+
+    // Don't fight the on-page CTA: hide while the footer conversion band is visible
+    const footerCta = document.querySelector('footer');
+    let footerVisible = false;
+
+    if (footerCta && 'IntersectionObserver' in window) {
+      new IntersectionObserver(
+        (entries) => {
+          footerVisible = entries[0]?.isIntersecting ?? false;
+          sync();
+        },
+        { rootMargin: '0px 0px -20% 0px' },
+      ).observe(footerCta);
+    }
+
+    let scrolledPastHero = false;
+    let dismissed = false;
+
+    function sync() {
+      const show = scrolledPastHero && !footerVisible && !dismissed;
+      bar!.classList.toggle('translate-y-full', !show);
+      bar!.classList.toggle('opacity-0', !show);
+      bar!.classList.toggle('pointer-events-none', !show);
+      bar!.setAttribute('aria-hidden', String(!show));
+    }
+
+    function onScroll() {
+      scrolledPastHero = window.scrollY > 620;
+      sync();
+    }
+
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    bar.querySelector('[data-sticky-dismiss]')?.addEventListener('click', () => {
+      dismissed = true;
+      try {
+        sessionStorage.setItem(STORAGE_KEY, '1');
+      } catch {
+        /* ignore */
+      }
+      sync();
+    });
+  })();
+</script>

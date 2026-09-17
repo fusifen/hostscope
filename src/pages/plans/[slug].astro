@@ -1,0 +1,490 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import RatingStars from '../../components/RatingStars.astro';
+import ProsCons from '../../components/ProsCons.astro';
+import FAQ from '../../components/FAQ.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
+import PlanCard from '../../components/PlanCard.astro';
+import AffiliateButton from '../../components/AffiliateButton.astro';
+import AffiliateDisclosure from '../../components/AffiliateDisclosure.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
+import { SITE } from '../../consts';
+import {
+  breadcrumbSchema,
+  faqSchema,
+  graph,
+  hostingProductSchema,
+  organizationSchema,
+  reviewSchema,
+} from '../../lib/seo';
+import {
+  blendedMonthly,
+  discountPercent,
+  perMonth,
+  renewalIncrease,
+  termTotal,
+} from '../../lib/pricing';
+
+export async function getStaticPaths() {
+  const plans = await getCollection('plans');
+  return plans.map((plan) => ({
+    params: { slug: plan.id },
+    props: { plan },
+  }));
+}
+
+const { plan } = Astro.props;
+const { data } = plan;
+const { Content, headings } = await render(plan);
+
+const allPlans = await getCollection('plans');
+const relatedPlans = allPlans
+  .filter((p) => p.id !== plan.id && p.data.group === data.group)
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 3);
+
+const crossSell = allPlans
+  .filter((p) => p.id !== plan.id && p.data.group !== data.group)
+  .sort((a, b) => Math.abs(a.data.pricing.promoMonthly - data.pricing.promoMonthly) - Math.abs(b.data.pricing.promoMonthly - data.pricing.promoMonthly))
+  .slice(0, 3);
+
+const url = new URL(`/plans/${plan.id}/`, SITE.url).toString();
+const groupLabel = {
+  web: 'Web hosting',
+  cloud: 'Cloud hosting',
+  vps: 'VPS hosting',
+  builder: 'Website builder',
+  agency: 'Agency hosting',
+}[data.group];
+
+const breadcrumbs = [
+  { name: 'Home', href: '/' },
+  { name: 'Plans', href: '/plans/' },
+  { name: data.name, href: `/plans/${plan.id}/` },
+];
+
+const off = discountPercent(data.pricing.regularMonthly, data.pricing.promoMonthly);
+const total = termTotal(data.pricing.promoMonthly, data.pricing.termMonths);
+const jump = renewalIncrease(data.pricing.promoMonthly, data.pricing.renewalMonthly);
+const blended = blendedMonthly(
+  data.pricing.promoMonthly,
+  data.pricing.renewalMonthly,
+  data.pricing.termMonths,
+  48 - Math.min(48, data.pricing.termMonths) || 12,
+);
+
+const verdictText = data.verdict.replace(/\s+/g, ' ').trim();
+
+const schema = graph([
+  organizationSchema(),
+  breadcrumbSchema(breadcrumbs),
+  hostingProductSchema({
+    name: `Hostinger ${data.name}`,
+    description: data.tagline,
+    url,
+    image: SITE.defaultOgImage,
+    lowPrice: data.pricing.promoMonthly,
+    highPrice: data.pricing.regularMonthly,
+    ratingValue: data.rating,
+    reviewCount: data.reviewCount || undefined,
+    planNames: [data.name],
+  }),
+  reviewSchema({
+    itemName: `Hostinger ${data.name}`,
+    itemUrl: url,
+    reviewBody: verdictText,
+    ratingValue: data.rating,
+    authorName: data.author.replace('-', ' '),
+    datePublished: data.publishedDate,
+  }),
+  ...(data.faqs.length ? [faqSchema(data.faqs)] : []),
+]);
+
+const specRows = [
+  { label: 'Websites', value: data.specs.websites },
+  ...(data.specs.nodeJsSites ? [{ label: 'Node.js websites', value: data.specs.nodeJsSites }] : []),
+  { label: 'CPU cores', value: data.specs.cpuCores },
+  { label: 'Memory (RAM)', value: data.specs.ram },
+  { label: 'Storage', value: `${data.specs.storage} ${data.specs.storageType}` },
+  { label: 'Bandwidth', value: data.specs.bandwidth },
+  ...(data.specs.inodes ? [{ label: 'Inodes (files & directories)', value: data.specs.inodes }] : []),
+  ...(data.specs.phpWorkers ? [{ label: 'PHP workers', value: data.specs.phpWorkers }] : []),
+  ...(data.specs.databases ? [{ label: 'Databases', value: data.specs.databases }] : []),
+  ...(data.specs.databaseSize ? [{ label: 'Database size', value: data.specs.databaseSize }] : []),
+  { label: 'Mailboxes', value: data.specs.mailboxes },
+  { label: 'Backups', value: data.specs.backups },
+  { label: 'Dedicated IP', value: data.specs.dedicatedIp ? 'Included' : 'Not included' },
+  { label: 'Free CDN', value: data.specs.cdn ? 'Included' : 'Bring your own' },
+  { label: 'Free SSL', value: data.specs.freeSsl ? 'Unlimited, auto-installed' : 'Install your own' },
+  ...(data.specs.aiCredits ? [{ label: 'AI Builder credits', value: data.specs.aiCredits }] : []),
+  { label: 'Free domain', value: data.pricing.freeDomain ? `Yes, for ${data.pricing.freeDomainMonths} months` : 'No' },
+  { label: 'Money-back guarantee', value: `${data.pricing.moneyBackDays} days` },
+];
+---
+
+<BaseLayout
+  title={data.seoTitle ?? `Hostinger ${data.name} Review 2026: Specs, Price and Renewal Rate`}
+  description={data.seoDescription ?? `${data.tagline} Full specs, intro price, renewal rate and our verdict on Hostinger ${data.name}.`}
+  canonical={url}
+  schema={schema}
+  image={`/og/plans-${plan.id}.png`}
+  keywords={[`hostinger ${data.name.toLowerCase()}`, `hostinger ${data.name.toLowerCase()} review`, `hostinger ${data.name.toLowerCase()} price`]}
+>
+  <!-- ══ HERO ═══════════════════════════════════════════════════════════ -->
+  <section class="relative overflow-hidden bg-ink-950 text-white">
+    <div class="absolute inset-0 grid-backdrop opacity-50" aria-hidden="true"></div>
+    <div class="container-page relative py-8 lg:py-12">
+      <Breadcrumbs items={breadcrumbs} light />
+
+      <div class="mt-6 grid gap-10 lg:grid-cols-[1.25fr_1fr] lg:items-start">
+        <div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span class="pill bg-white/10 !text-brand-200">{groupLabel}</span>
+            {data.badge && <span class="pill pill-mint">{data.badge}</span>}
+          </div>
+
+          <h1 class="mt-4 text-[2rem] font-extrabold leading-[1.1] tracking-[-0.03em] !text-white sm:text-[2.5rem]">
+            Hostinger {data.name}
+          </h1>
+          <p class="mt-4 max-w-xl text-[1.0625rem] leading-relaxed text-ink-300">{data.tagline}</p>
+
+          <div class="mt-5 flex flex-wrap items-center gap-4">
+            <RatingStars value={data.rating} count={data.reviewCount || undefined} size="lg" />
+            <span class="text-[0.75rem] text-ink-400">
+              Prices checked {data.priceChecked ? data.priceChecked.toISOString().slice(0, 10) : SITE.pricingVerified}
+            </span>
+          </div>
+
+          <div class="mt-7 flex flex-wrap gap-3">
+            <AffiliateButton
+              placement="plan-detail-hero"
+              plan={plan.id}
+              campaign="plan-hero"
+              label={`Claim the ${data.name} deal`}
+              sublabel={`Save ${off}%`}
+              size="xl"
+              pulse
+            />
+            <a href="/pricing/" class="btn btn-ghost-light btn-xl">Compare all plans</a>
+          </div>
+          <p class="mt-3 text-[0.6875rem] text-ink-400">
+            Affiliate link · you pay the same price · 30-day money-back guarantee
+          </p>
+
+          <!-- Spec strip -->
+          <dl class="mt-9 grid grid-cols-2 gap-x-5 gap-y-5 border-t border-white/10 pt-7 sm:grid-cols-4">
+            {
+              [
+                { label: 'CPU', value: `${data.specs.cpuCores} core${data.specs.cpuCores === '1' ? '' : 's'}` },
+                { label: 'RAM', value: data.specs.ram },
+                { label: 'Storage', value: `${data.specs.storage}` },
+                { label: 'Websites', value: data.specs.websites },
+              ].map((item) => (
+                <div>
+                  <dt class="text-[0.625rem] font-bold tracking-[0.08em] text-ink-400 uppercase">
+                    {item.label}
+                  </dt>
+                  <dd class="mt-1 text-[1.0625rem] font-extrabold !text-white">{item.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </div>
+
+        <!-- Price card -->
+        <div class="rounded-2xl border border-white/12 bg-white/95 p-6 shadow-[var(--shadow-pop)] backdrop-blur">
+          <div class="flex items-baseline justify-between gap-3">
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-[2.75rem] font-extrabold leading-none tracking-[-0.04em] text-ink-950">
+                ${data.pricing.promoMonthly.toFixed(2)}
+              </span>
+              <span class="text-sm font-semibold text-ink-500">/mo</span>
+            </div>
+            <span class="text-[0.8125rem] font-medium text-ink-400 line-through">
+              ${data.pricing.regularMonthly.toFixed(2)}
+            </span>
+          </div>
+
+          <div class="mt-2.5 flex flex-wrap items-center gap-2">
+            <span class="pill pill-mint !normal-case !tracking-normal">Save {off}%</span>
+            <span class="text-[0.6875rem] font-medium text-ink-500">{data.pricing.termLabel} term</span>
+          </div>
+
+          <dl class="mt-5 space-y-2.5 border-t border-line pt-5 text-[0.8125rem]">
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-500">Paid upfront</dt>
+              <dd class="font-bold text-ink-900">${total.toFixed(2)}</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-500">Renews at</dt>
+              <dd class="font-bold text-ink-900">{perMonth(data.pricing.renewalMonthly)}/mo</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-500">Renewal increase</dt>
+              <dd>
+                <span class:list={['pill', jump > 100 ? 'pill-coral' : 'pill-sun']}>+{jump}%</span>
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-500">Blended over 4 yrs</dt>
+              <dd class="font-bold text-ink-900">${blended.toFixed(2)}/mo</dd>
+            </div>
+          </dl>
+
+          <div class="mt-5">
+            <AffiliateButton
+              placement="plan-detail-hero"
+              plan={plan.id}
+              campaign="plan-card"
+              label="Claim deal"
+              size="lg"
+              variant="mint"
+              fullWidth
+            />
+          </div>
+
+          {data.pricing.note && (
+            <p class="mt-3 text-[0.6875rem] leading-relaxed text-ink-500">{data.pricing.note}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ BODY ═══════════════════════════════════════════════════════════ -->
+  <div class="container-page py-10 lg:py-14">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] xl:gap-14">
+      <div class="min-w-0">
+        <!-- Verdict -->
+        <div class="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-6">
+          <p class="eyebrow">Our verdict</p>
+          <p class="mt-3 text-[1.0625rem] leading-relaxed text-ink-700">{verdictText}</p>
+        </div>
+
+        <!-- Pros / cons -->
+        <ProsCons pros={data.pros} cons={data.cons} class="mt-8" />
+
+        <!-- Feature checklist -->
+        {
+          data.features.length > 0 && (
+            <section class="mt-10">
+              <h2 class="text-xl font-extrabold tracking-[-0.02em] text-ink-950 sm:text-2xl">
+                What's included
+              </h2>
+              <ul class="mt-5 grid gap-2.5 sm:grid-cols-2">
+                {data.features.map((feature) => {
+                  const included = feature.included !== false;
+                  return (
+                    <li class="flex items-start gap-3 rounded-xl border border-line bg-white p-3.5">
+                      <span
+                        class:list={[
+                          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white',
+                          included ? 'bg-mint-500' : 'bg-ink-300',
+                        ]}
+                        aria-hidden="true"
+                      >
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="3" class="h-2.5 w-2.5">
+                          {included ? (
+                            <path d="m3.5 8.5 3 3 6-7" stroke-linecap="round" stroke-linejoin="round" />
+                          ) : (
+                            <path d="M4.5 4.5l7 7m0-7-7 7" stroke-linecap="round" />
+                          )}
+                        </svg>
+                      </span>
+                      <span class="min-w-0 text-[0.875rem] leading-snug">
+                        <span class="font-semibold text-ink-800">{feature.label}</span>
+                        {typeof feature.included === 'string' && (
+                          <span class="ml-1 text-ink-500">— {feature.included}</span>
+                        )}
+                        {feature.included === false && (
+                          <span class="ml-1 text-ink-400">— not included</span>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )
+        }
+
+        <!-- Full specs -->
+        <section class="mt-10">
+          <h2 class="text-xl font-extrabold tracking-[-0.02em] text-ink-950 sm:text-2xl">
+            Full technical specification
+          </h2>
+          <p class="mt-2 text-[0.875rem] text-ink-500">
+            Taken from Hostinger's published parameters table, not a marketing page.
+          </p>
+          <div class="mt-4 scroll-x rounded-2xl border border-line bg-white">
+            <table class="w-full min-w-[30rem] border-collapse text-[0.875rem]">
+              <caption class="sr-only">Technical specification for Hostinger {data.name}</caption>
+              <tbody>
+                {
+                  specRows.map((row, i) => (
+                    <tr class:list={['border-b border-line last:border-0', i % 2 === 1 && 'bg-ink-50/40']}>
+                      <th scope="row" class="w-1/2 px-4 py-2.5 text-left font-semibold text-ink-700">
+                        {row.label}
+                      </th>
+                      <td class="px-4 py-2.5 text-ink-600">{row.value}</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <AffiliateDisclosure class="mt-10" />
+
+        <TableOfContents headings={headings} variant="inline" class="mt-8" />
+
+        <div class="prose-hs mt-8">
+          <Content />
+        </div>
+
+        <!-- Not for -->
+        {
+          data.notFor.length > 0 && (
+            <section class="mt-10 rounded-2xl border border-coral-100 bg-coral-50/50 p-5">
+              <h2 class="text-[0.9375rem] font-bold !text-coral-600">
+                Don't buy {data.name} if…
+              </h2>
+              <ul class="mt-3 space-y-2">
+                {data.notFor.map((item) => (
+                  <li class="flex gap-2.5 text-[0.875rem] leading-relaxed text-ink-700">
+                    <span class="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-coral-500" aria-hidden="true" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
+
+        {data.faqs.length > 0 && <FAQ faqs={data.faqs} class="mt-10" />}
+
+        <!-- Footer CTA -->
+        <div class="mt-10">
+          <AffiliateButton
+            placement="plan-detail-footer"
+            plan={plan.id}
+            campaign="plan-footer"
+            label={`Claim the ${data.name} deal`}
+            size="xl"
+            fullWidth
+          />
+        </div>
+
+        <div class="mt-8 rounded-2xl border border-line bg-white p-5">
+          <AuthorCard author={data.author} detailed updated={data.updatedDate} />
+        </div>
+
+        <!-- Related plans -->
+        <section class="mt-12">
+          <h2 class="text-xl font-extrabold tracking-[-0.02em] text-ink-950 sm:text-2xl">
+            Other {groupLabel.toLowerCase()} plans
+          </h2>
+          <div class="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {relatedPlans.map((p) => <PlanCard plan={p} />)}
+          </div>
+        </section>
+      </div>
+
+      <!-- ══ SIDEBAR ═════════════════════════════════════════════════════ -->
+      <aside class="space-y-5">
+        <TableOfContents headings={headings} variant="sidebar" />
+
+        <div class="space-y-5 lg:sticky lg:top-28">
+          <div class="rounded-2xl border border-brand-200 bg-gradient-to-b from-brand-50 to-white p-4">
+            <p class="eyebrow !text-[0.625rem]">Current deal</p>
+            <p class="mt-2 text-[0.9375rem] font-extrabold leading-snug text-ink-950">
+              {data.name} from ${data.pricing.promoMonthly.toFixed(2)}/mo
+            </p>
+            <p class="mt-1.5 text-[0.75rem] leading-relaxed text-ink-600">
+              {off}% off the ${data.pricing.regularMonthly.toFixed(2)} regular rate.
+            </p>
+            <div class="mt-3">
+              <AffiliateButton
+                placement="sidebar-widget"
+                plan={plan.id}
+                label="Claim deal"
+                size="sm"
+                fullWidth
+              />
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-line bg-white p-4">
+            <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+              At a glance
+            </p>
+            <dl class="mt-3 space-y-2.5 text-[0.8125rem]">
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-500">Group</dt>
+                <dd class="font-semibold text-ink-800">{groupLabel}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-500">Term</dt>
+                <dd class="font-semibold text-ink-800">{data.pricing.termLabel}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-500">Upfront</dt>
+                <dd class="font-semibold text-ink-800">${total.toFixed(2)}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-500">Backups</dt>
+                <dd class="text-right font-semibold text-ink-800">{data.specs.backups}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-500">Dedicated IP</dt>
+                <dd class="font-semibold text-ink-800">
+                  {data.specs.dedicatedIp ? 'Yes' : 'No'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {
+            crossSell.length > 0 && (
+              <div class="rounded-2xl border border-line bg-white p-4">
+                <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+                  Also consider
+                </p>
+                <ul class="mt-3 space-y-2">
+                  {crossSell.map((p) => (
+                    <li>
+                      <a
+                        href={`/plans/${p.id}/`}
+                        class="flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-[0.8125rem] font-medium text-ink-600 transition hover:bg-brand-50 hover:text-brand-700"
+                      >
+                        <span>{p.data.name}</span>
+                        <span class="font-bold text-ink-900">
+                          ${p.data.pricing.promoMonthly.toFixed(2)}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          }
+
+          <div class="rounded-2xl border border-line bg-white p-4">
+            <p class="text-[0.6875rem] font-bold tracking-[0.08em] text-ink-500 uppercase">
+              Useful next
+            </p>
+            <ul class="mt-2.5 space-y-1.5">
+              <li><a href="/pricing/" class="link-quiet text-[0.8125rem] font-medium">Full pricing matrix →</a></li>
+              <li><a href="/tools/hosting-cost-calculator/" class="link-quiet text-[0.8125rem] font-medium">True cost calculator →</a></li>
+              <li><a href="/coupons/" class="link-quiet text-[0.8125rem] font-medium">Working promo codes →</a></li>
+              <li><a href="/blog/hostinger-renewal-prices-explained/" class="link-quiet text-[0.8125rem] font-medium">Renewal prices explained →</a></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

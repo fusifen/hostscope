@@ -1,0 +1,542 @@
+# =============================================================================
+#  Sveltia CMS configuration — HostScope
+# =============================================================================
+#  Sveltia CMS is a drop-in, faster replacement for Decap/Netlify CMS. It reads
+#  this file, renders an editor UI, and commits the result straight back to your
+#  GitHub repository. No database, no server, no build step on your machine.
+#
+#  ── Getting it working ─────────────────────────────────────────────────────
+#  1. Change `backend.repo` below to your own `owner/repository`.
+#  2. Authentication. Pick ONE:
+#       a) GitHub + OAuth broker (recommended)
+#            Deploy the tiny `sveltia-cms-auth` Cloudflare Worker
+#            (https://github.com/sveltia/sveltia-cms-auth), then set
+#            `base_url` to the Worker URL. Register a GitHub OAuth App with the
+#            Worker URL as its callback.
+#       b) Netlify Identity + Git Gateway
+#            Set `backend.name: git-gateway` and enable Identity + Git Gateway
+#            in your Netlify site settings.
+#  3. Visit /admin/ on your deployed site and sign in with GitHub.
+#
+#  ── Field types at a glance ────────────────────────────────────────────────
+#    string | text | markdown | number | boolean | datetime | select
+#    image | file | list | object | relation
+#
+#  Every field name below maps 1:1 onto the Zod schema in
+#  `src/content.config.ts`. Renaming a field here without renaming it there
+#  will break the build — keep them in sync.
+# =============================================================================
+
+backend:
+  name: github
+  # ↓↓↓ CHANGE THIS to your own repository ↓↓↓
+  repo: your-github-user/hostscope
+  branch: main
+  # Uncomment and point at your OAuth broker (see step 2a above):
+  # base_url: https://your-sveltia-auth-worker.workers.dev
+  commit_messages:
+    create: 'content: add {{collection}} "{{slug}}"'
+    update: 'content: update {{collection}} "{{slug}}"'
+    delete: 'content: delete {{collection}} "{{slug}}"'
+    uploadMedia: 'content: upload media "{{path}}"'
+    deleteMedia: 'content: delete media "{{path}}"'
+
+# ── Site metadata shown in the CMS UI ────────────────────────────────────────
+site_url: https://hostscope.io
+display_url: https://hostscope.io
+logo_url: https://hostscope.io/images/brand/hostscope-logo.svg
+locale: en
+
+# ── Media library ───────────────────────────────────────────────────────────
+media_folder: public/images/uploads
+public_folder: /images/uploads
+media_library:
+  name: default
+  config:
+    multiple: true
+
+# ── Shared option lists ─────────────────────────────────────────────────────
+# Repeated option sets (authors, FAQ sub-fields) are defined once with a YAML
+# anchor (`&name`) and re-used with an alias (`*name`). Anchors are declared on
+# the first field that needs them — no extra top-level keys, which keeps the
+# file valid for both Sveltia and Decap.
+
+collections:
+  # ===========================================================================
+  #  ARTICLES — reviews, tutorials, guides, deals, troubleshooting
+  #  Written to src/content/articles/*.md
+  # ===========================================================================
+  - name: articles
+    label: Articles
+    label_singular: Article
+    description: >-
+      Long-form content: reviews, buying guides, tutorials, deal write-ups and
+      troubleshooting posts. Frontmatter drives SEO, structured data and the
+      contextual offer cards.
+    folder: src/content/articles
+    create: true
+    delete: true
+    extension: md
+    format: frontmatter
+    slug: '{{slug}}'
+    preview_path: 'blog/{{slug}}'
+    identifier_field: title
+    summary: '{{title}}  ·  {{category}}  ·  {{pubDate}}'
+    sortable_fields: ['pubDate', 'updatedDate', 'title', 'category']
+    view_groups:
+      - label: Category
+        field: category
+      - label: Year
+        field: pubDate
+        pattern: \d{4}
+    view_filters:
+      - label: Reviews
+        field: category
+        pattern: review
+      - label: Tutorials
+        field: category
+        pattern: tutorial
+      - label: Guides
+        field: category
+        pattern: guide
+      - label: Deals
+        field: category
+        pattern: deals
+      - label: Troubleshooting
+        field: category
+        pattern: troubleshooting
+      - label: Drafts
+        field: draft
+        pattern: true
+      - label: Featured
+        field: featured
+        pattern: true
+    fields:
+      - label: Title
+        name: title
+        widget: string
+        hint: Sentence case, under 65 characters. This is the H1 and the <title> tag.
+
+      - label: Meta description
+        name: description
+        widget: text
+        pattern: ['^.{110,320}$', 'Keep it between 110 and 320 characters — Google truncates around 160.']
+        hint: Shown in search results. Lead with the answer, not with "In this article".
+
+      - label: SEO title override
+        name: seoTitle
+        widget: string
+        required: false
+        hint: Leave blank to use the article title.
+
+      - label: SEO description override
+        name: seoDescription
+        widget: text
+        required: false
+
+      - label: Hide from search engines
+        name: noindex
+        widget: boolean
+        default: false
+
+      - label: Publication date
+        name: pubDate
+        widget: datetime
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        picker_utc: true
+
+      - label: Last updated
+        name: updatedDate
+        widget: datetime
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        picker_utc: true
+        required: false
+
+      - label: Author
+        name: author
+        widget: select
+        options: &author-options
+          - { label: 'Maya Ross — reviews, guides, deals', value: maya-ross }
+          - { label: 'Daniel Okafor — VPS, performance, troubleshooting', value: daniel-okafor }
+          - { label: 'Priya Nair — WordPress, ecommerce, email', value: priya-nair }
+        default: maya-ross
+
+      - label: Reviewed by
+        name: reviewedBy
+        widget: select
+        required: false
+        options: *author-options
+        hint: Optional second-pair-of-eyes credit. Leave blank when the author is also the reviewer.
+
+      - label: Category
+        name: category
+        widget: select
+        options:
+          - { label: 'Review', value: review }
+          - { label: 'Tutorial', value: tutorial }
+          - { label: 'Buying guide', value: guide }
+          - { label: 'Deals & pricing', value: deals }
+          - { label: 'Comparison', value: comparison }
+          - { label: 'Troubleshooting', value: troubleshooting }
+
+      - label: Tags
+        name: tags
+        widget: list
+        required: false
+        hint: Lowercase, one to three words. These generate /tag/ archive pages.
+
+      - label: Primary keyword
+        name: primaryKeyword
+        widget: string
+        required: false
+        hint: The search phrase this article targets. Used for internal linking.
+
+      - label: Affiliate disclosure banner
+        name: affiliateNotice
+        widget: boolean
+        default: true
+        hint: Leave on for any page that will carry offer cards.
+
+      - label: Feature on the home page
+        name: featured
+        widget: boolean
+        default: false
+
+      - label: Draft
+        name: draft
+        widget: boolean
+        default: false
+        hint: Drafts are excluded from listings and the sitemap.
+
+      - label: Reading time (minutes)
+        name: readingTime
+        widget: number
+        value_type: int
+        min: 1
+        max: 60
+        required: false
+
+      - label: Editorial rating
+        name: rating
+        widget: number
+        value_type: float
+        min: 0
+        max: 5
+        step: 0.1
+        required: false
+        hint: Only use this on reviews. It emits a Review schema block.
+
+      - label: Related plans
+        name: relatedPlans
+        widget: select
+        multiple: true
+        required: false
+        options:
+          - { label: 'Premium', value: premium }
+          - { label: 'Unlimited', value: unlimited }
+          - { label: 'Cloud Startup', value: cloud-startup }
+          - { label: 'Cloud Professional', value: cloud-professional }
+          - { label: 'Cloud Enterprise', value: cloud-enterprise }
+          - { label: 'KVM 1 VPS', value: kvm-1 }
+          - { label: 'KVM 2 VPS', value: kvm-2 }
+          - { label: 'KVM 4 VPS', value: kvm-4 }
+          - { label: 'KVM 8 VPS', value: kvm-8 }
+          - { label: 'Website Builder', value: hostinger-ai-builder }
+        hint: The first entry becomes the plan promoted in the article's offer cards.
+
+      - label: Related articles
+        name: relatedArticles
+        widget: relation
+        collection: articles
+        search_fields: ['title', 'tags']
+        value_field: '{{slug}}'
+        display_fields: ['title']
+        multiple: true
+        required: false
+
+      - label: Frequently asked questions
+        name: faqs
+        label_singular: FAQ
+        widget: list
+        required: false
+        summary: '{{fields.question}}'
+        hint: These render as an accordion AND as FAQPage structured data. Write 4–7.
+        fields: &faq-fields
+          - { label: Question, name: question, widget: string }
+          - { label: Answer, name: answer, widget: text }
+
+      - label: Step-by-step instructions
+        name: steps
+        label_singular: Step
+        widget: list
+        required: false
+        summary: '{{fields.name}}'
+        hint: Only for genuine procedures. Emits HowTo structured data.
+        fields:
+          - { label: Step name, name: name, widget: string }
+          - { label: What to do, name: text, widget: text }
+
+      - label: Hero image
+        name: heroImage
+        widget: image
+        required: false
+        hint: Optional. Social cards are generated automatically if you leave this blank.
+
+      - label: Hero image alt text
+        name: heroImageAlt
+        widget: string
+        required: false
+
+      - label: Body
+        name: body
+        widget: markdown
+        hint: >-
+          Use ## for sections and ### for sub-points. Include at least one table and
+          one blockquote. Link internally with root-relative paths like /plans/unlimited/.
+          Do not add affiliate URLs or an FAQ section here — the layout handles both.
+
+  # ===========================================================================
+  #  HOSTINGER PLANS — structured product data + long-form plan review
+  #  Written to src/content/plans/*.md
+  # ===========================================================================
+  - name: plans
+    label: Hostinger plans
+    label_singular: Plan
+    description: >-
+      One file per plan. The frontmatter feeds the pricing matrix, the comparison
+      tables and the product structured data; the body is the editorial review.
+      Update prices here and they change everywhere on the site.
+    folder: src/content/plans
+    create: true
+    delete: false
+    extension: md
+    format: frontmatter
+    slug: '{{slug}}'
+    preview_path: 'plans/{{slug}}'
+    identifier_field: name
+    summary: '{{name}}  ·  ${{fields.pricing.promoMonthly}}/mo  ·  renews ${{fields.pricing.renewalMonthly}}'
+    sortable_fields: ['order', 'name', 'fields.pricing.promoMonthly']
+    fields:
+      - { label: Plan name, name: name, widget: string }
+      - { label: Short name, name: shortName, widget: string, required: false }
+      - label: Product family
+        name: group
+        widget: select
+        options:
+          - { label: 'Web hosting', value: web }
+          - { label: 'Cloud hosting', value: cloud }
+          - { label: 'VPS hosting', value: vps }
+          - { label: 'Website builder', value: builder }
+          - { label: 'Agency hosting', value: agency }
+      - { label: Tagline, name: tagline, widget: string }
+      - { label: Sort order, name: order, widget: number, value_type: int, default: 99 }
+      - { label: Feature on the home page, name: featured, widget: boolean, default: false }
+      - { label: Badge / ribbon text, name: badge, widget: string, required: false }
+      - label: Editorial score
+        name: rating
+        widget: number
+        value_type: float
+        min: 0
+        max: 5
+        step: 0.1
+      - { label: Number of reviews, name: reviewCount, widget: number, value_type: int, default: 0 }
+      - label: Best for
+        name: bestFor
+        widget: list
+        required: false
+
+      # ── Pricing ──────────────────────────────────────────────────────────
+      - label: Pricing
+        name: pricing
+        widget: object
+        fields:
+          - label: Currency
+            name: currency
+            widget: select
+            options: [USD, EUR, GBP]
+            default: USD
+          - { label: 'Intro term length (months)', name: termMonths, widget: number, value_type: int, default: 48 }
+          - { label: 'Intro term label', name: termLabel, widget: string, default: '48 months' }
+          - { label: 'Intro price per month ($)', name: promoMonthly, widget: number, value_type: float, step: 0.01 }
+          - { label: 'Regular price per month ($)', name: regularMonthly, widget: number, value_type: float, step: 0.01 }
+          - { label: 'Renewal price per month ($)', name: renewalMonthly, widget: number, value_type: float, step: 0.01 }
+          - { label: 'Free domain included', name: freeDomain, widget: boolean, default: true }
+          - { label: 'Free domain duration (months)', name: freeDomainMonths, widget: number, value_type: int, default: 12 }
+          - { label: 'Money-back window (days)', name: moneyBackDays, widget: number, value_type: int, default: 30 }
+          - { label: Checkout note, name: note, widget: text, required: false }
+
+      # ── Technical specification ──────────────────────────────────────────
+      - label: Technical specification
+        name: specs
+        widget: object
+        fields:
+          - { label: Websites, name: websites, widget: string }
+          - { label: Node.js websites, name: nodeJsSites, widget: string, required: false }
+          - { label: CPU cores, name: cpuCores, widget: string }
+          - { label: RAM, name: ram, widget: string }
+          - { label: Storage amount, name: storage, widget: string }
+          - label: Storage type
+            name: storageType
+            widget: select
+            options: [SSD, NVMe, 'NVMe SSD']
+          - { label: Bandwidth, name: bandwidth, widget: string }
+          - { label: Inodes, name: inodes, widget: string, required: false }
+          - { label: PHP workers, name: phpWorkers, widget: string, required: false }
+          - { label: Databases, name: databases, widget: string, required: false }
+          - { label: Database size, name: databaseSize, widget: string, required: false }
+          - { label: Mailboxes, name: mailboxes, widget: string }
+          - { label: Dedicated IP included, name: dedicatedIp, widget: boolean, default: false }
+          - { label: Backups, name: backups, widget: string }
+          - { label: CDN included, name: cdn, widget: boolean, default: true }
+          - { label: Free SSL included, name: freeSsl, widget: boolean, default: true }
+          - { label: AI Builder credits, name: aiCredits, widget: string, required: false }
+
+      - label: Feature checklist
+        name: features
+        label_singular: Feature
+        widget: list
+        required: false
+        summary: '{{fields.label}}'
+        hint: Rendered as the "what's included" grid on the plan page.
+        fields:
+          - { label: Label, name: label, widget: string }
+          - label: Included
+            name: included
+            widget: string
+            hint: 'Type true, false, or a value such as "5 credits" or "1 year".'
+
+      - label: Card highlights
+        name: highlights
+        widget: list
+        required: false
+        hint: Short bullets shown on the pricing card. Keep to five.
+
+      - { label: Pros, name: pros, widget: list, required: false }
+      - { label: Cons, name: cons, widget: list, required: false }
+      - { label: Verdict, name: verdict, widget: text }
+      - { label: Do not buy this if…, name: notFor, widget: list, required: false }
+
+      - label: Frequently asked questions
+        name: faqs
+        label_singular: FAQ
+        widget: list
+        required: false
+        summary: '{{fields.question}}'
+        fields: *faq-fields
+
+      - label: Author
+        name: author
+        widget: select
+        options: *author-options
+        default: maya-ross
+      - { label: Published date, name: publishedDate, widget: datetime, date_format: 'YYYY-MM-DD', time_format: false, picker_utc: true }
+      - { label: Updated date, name: updatedDate, widget: datetime, date_format: 'YYYY-MM-DD', time_format: false, picker_utc: true, required: false }
+      - label: Prices last checked
+        name: priceChecked
+        widget: datetime
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        picker_utc: true
+        required: false
+        hint: Always update this when you change a price.
+      - { label: Hero image, name: heroImage, widget: image, required: false }
+      - { label: SEO title override, name: seoTitle, widget: string, required: false }
+      - { label: SEO description override, name: seoDescription, widget: text, required: false }
+      - { label: Hide from search engines, name: noindex, widget: boolean, default: false }
+
+      - label: Body
+        name: body
+        widget: markdown
+        hint: >-
+          The plan review. Cover the resources in plain English, who it suits,
+          where it stops being enough, how it compares to the tiers either side,
+          and how to buy it without overpaying.
+
+  # ===========================================================================
+  #  COMPARISONS — Hostinger head-to-head pages
+  #  Written to src/content/comparisons/*.md
+  # ===========================================================================
+  - name: comparisons
+    label: Comparisons
+    label_singular: Comparison
+    description: >-
+      Head-to-head pages against rival hosts. The `rows` list renders the scored
+      comparison table, so add a row here and it appears on the page instantly.
+    folder: src/content/comparisons
+    create: true
+    delete: true
+    extension: md
+    format: frontmatter
+    slug: '{{slug}}'
+    preview_path: 'compare/{{slug}}'
+    identifier_field: title
+    summary: 'Hostinger vs {{competitor}}  ·  winner: {{winner}}'
+    sortable_fields: ['competitor', 'pubDate', 'winner']
+    fields:
+      - { label: Competitor name, name: competitor, widget: string }
+      - { label: Competitor website, name: competitorUrl, widget: string, required: false }
+      - { label: Page title, name: title, widget: string }
+      - { label: Meta description, name: description, widget: text }
+      - { label: One-line verdict, name: verdict, widget: text }
+      - { label: Winner, name: winner, widget: string }
+      - { label: Published date, name: pubDate, widget: datetime, date_format: 'YYYY-MM-DD', time_format: false, picker_utc: true }
+      - { label: Updated date, name: updatedDate, widget: datetime, date_format: 'YYYY-MM-DD', time_format: false, picker_utc: true, required: false }
+      - label: Author
+        name: author
+        widget: select
+        options: *author-options
+        default: maya-ross
+      - label: Highlighted column
+        name: highlightColumn
+        widget: number
+        value_type: int
+        min: 1
+        max: 2
+        default: 1
+        hint: '1 highlights the Hostinger column, 2 highlights the competitor.'
+
+      - label: Comparison rows
+        name: rows
+        label_singular: Row
+        widget: list
+        summary: '{{fields.label}} → {{fields.edge}}'
+        hint: Nine to thirteen rows works best. Give the competitor the edge where it genuinely wins.
+        fields:
+          - { label: Row label, name: label, widget: string }
+          - { label: Hostinger value, name: hostinger, widget: string }
+          - { label: Competitor value, name: competitor, widget: string }
+          - label: Who wins this row
+            name: edge
+            widget: select
+            options:
+              - { label: Hostinger, value: hostinger }
+              - { label: Competitor, value: competitor }
+              - { label: Tie, value: tie }
+            default: tie
+
+      - { label: Hostinger pros, name: hostingerPros, widget: list, required: false }
+      - { label: Hostinger cons, name: hostingerCons, widget: list, required: false }
+      - { label: Competitor pros, name: competitorPros, widget: list, required: false }
+      - { label: Competitor cons, name: competitorCons, widget: list, required: false }
+
+      - label: Frequently asked questions
+        name: faqs
+        label_singular: FAQ
+        widget: list
+        required: false
+        summary: '{{fields.question}}'
+        fields: *faq-fields
+
+      - { label: SEO title override, name: seoTitle, widget: string, required: false }
+      - { label: SEO description override, name: seoDescription, widget: text, required: false }
+      - { label: Hide from search engines, name: noindex, widget: boolean, default: false }
+
+      - label: Body
+        name: body
+        widget: markdown
+        hint: >-
+          The written comparison. Cover who each host is for, the pricing
+          structure, performance, control panel, support, where the competitor
+          wins, and a recommendation by use case.

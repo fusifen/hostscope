@@ -1,0 +1,465 @@
+---
+/**
+ * PlanFinder — a three-question quiz that recommends a Hostinger plan.
+ *
+ * All plan data comes from the content collection and is serialised into the
+ * page, so recommendations stay in sync with the pricing matrix automatically.
+ * Scoring is deterministic and explainable — no black box.
+ */
+import type { CollectionEntry } from 'astro:content';
+import { affiliateUrl } from '../consts';
+import PlanCard from './PlanCard.astro';
+
+export interface Props {
+  plans: CollectionEntry<'plans'>[];
+  class?: string;
+}
+
+const { plans, class: className = '' } = Astro.props;
+
+const payload = plans
+  .map((plan) => ({
+    slug: plan.id,
+    name: plan.data.name,
+    group: plan.data.group,
+    tagline: plan.data.tagline,
+    badge: plan.data.badge ?? null,
+    rating: plan.data.rating,
+    promo: plan.data.pricing.promoMonthly,
+    regular: plan.data.pricing.regularMonthly,
+    renewal: plan.data.pricing.renewalMonthly,
+    term: plan.data.pricing.termLabel,
+    termMonths: plan.data.pricing.termMonths,
+    specs: {
+      websites: plan.data.specs.websites,
+      cores: plan.data.specs.cpuCores,
+      ram: plan.data.specs.ram,
+      storage: `${plan.data.specs.storage} ${plan.data.specs.storageType}`,
+      backups: plan.data.specs.backups,
+    },
+    highlights: plan.data.highlights.slice(0, 4),
+  }))
+  .sort((a, b) => a.promo - b.promo);
+
+const QUESTIONS = [
+  {
+    id: 'project',
+    title: 'What are you putting online?',
+    options: [
+      { value: 'first', label: 'My first website or portfolio', hint: 'Blog, CV, personal brand' },
+      { value: 'business', label: 'A business or client site', hint: 'Service business, brochure, brochure + blog' },
+      { value: 'store', label: 'An online store', hint: 'WooCommerce, product catalogue' },
+      { value: 'app', label: 'An app, API or dev project', hint: 'Node, Docker, custom stack' },
+    ],
+  },
+  {
+    id: 'traffic',
+    title: 'How much traffic do you expect in the next year?',
+    options: [
+      { value: 'low', label: 'Under 10,000 visits a month', hint: 'Starting out' },
+      { value: 'medium', label: '10,000–50,000 visits a month', hint: 'Growing steadily' },
+      { value: 'high', label: '50,000–250,000 visits a month', hint: 'Established site' },
+      { value: 'spike', label: 'Unpredictable spikes', hint: 'Launches, campaigns, virality' },
+    ],
+  },
+  {
+    id: 'skill',
+    title: 'How hands-on do you want to be?',
+    options: [
+      { value: 'none', label: 'Not at all — I want it managed', hint: 'Point and click only' },
+      { value: 'some', label: 'A bit — I can follow a tutorial', hint: 'DNS, plugins, email' },
+      { value: 'lots', label: 'Very — I want root access', hint: 'SSH, servers, Docker' },
+    ],
+  },
+  {
+    id: 'budget',
+    title: 'What matters most on price?',
+    options: [
+      { value: 'cheapest', label: 'Cheapest possible', hint: 'Minimise the upfront payment' },
+      { value: 'value', label: 'Best value for the resources', hint: 'Willing to pay a bit more for headroom' },
+      { value: 'power', label: 'Give me the most power', hint: 'Performance over price' },
+    ],
+  },
+] as const;
+---
+
+<div class={className} data-plan-finder>
+  <script type="application/json" data-plans-payload set:html={JSON.stringify(payload)} />
+
+  <!-- Progress -->
+  <div class="flex items-center gap-3">
+    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-100">
+      <div
+        class="h-full w-0 rounded-full bg-gradient-to-r from-brand-500 to-brand-700 transition-all duration-500"
+        data-finder-progress
+      >
+      </div>
+    </div>
+    <span class="shrink-0 text-[0.75rem] font-semibold text-ink-500" data-finder-step-label>
+      Step 1 of {QUESTIONS.length}
+    </span>
+  </div>
+
+  <!-- Questions -->
+  <div class="mt-6">
+    {
+      QUESTIONS.map((question, qIndex) => (
+        <fieldset
+          data-finder-question={question.id}
+          data-finder-index={qIndex}
+          hidden={qIndex !== 0}
+          class="border-0 p-0"
+        >
+          <legend class="text-lg font-extrabold tracking-[-0.02em] text-ink-950 sm:text-xl">
+            {question.title}
+          </legend>
+          <div class="mt-4 grid gap-2.5 sm:grid-cols-2">
+            {question.options.map((option) => (
+              <button
+                type="button"
+                data-finder-option
+                data-question={question.id}
+                data-value={option.value}
+                class="group flex items-start gap-3 rounded-xl border border-line bg-white p-4 text-left transition hover:border-brand-300 hover:bg-brand-50"
+              >
+                <span
+                  class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-ink-200 transition group-hover:border-brand-500 group-data-[selected=true]:border-brand-600 group-data-[selected=true]:bg-brand-600"
+                  aria-hidden="true"
+                >
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    class="h-2.5 w-2.5 text-white opacity-0 group-data-[selected=true]:opacity-100"
+                  >
+                    <path d="m3.5 8.5 3 3 6-7" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-[0.875rem] font-semibold text-ink-900">
+                    {option.label}
+                  </span>
+                  <span class="mt-0.5 block text-[0.75rem] text-ink-500">{option.hint}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ))
+    }
+  </div>
+
+  <!-- Navigation -->
+  <div class="mt-6 flex items-center justify-between gap-3" data-finder-nav>
+    <button type="button" data-finder-back class="btn btn-outline btn-md invisible">Back</button>
+    <p class="text-[0.75rem] text-ink-400">No email required — results appear instantly.</p>
+  </div>
+
+  <!-- Result -->
+  <div data-finder-result hidden class="mt-6">
+    <div class="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5">
+      <p class="eyebrow">Our recommendation</p>
+      <h3 class="mt-2 text-xl font-extrabold tracking-[-0.02em] text-ink-950">
+        <span data-finder-plan-name>—</span>
+      </h3>
+      <p class="mt-2 text-[0.875rem] leading-relaxed text-ink-600" data-finder-reason></p>
+
+      <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        <div>
+          <dt class="text-[0.625rem] font-bold tracking-[0.06em] text-ink-400 uppercase">Price</dt>
+          <dd class="text-[0.9375rem] font-extrabold text-ink-950" data-finder-price>—</dd>
+        </div>
+        <div>
+          <dt class="text-[0.625rem] font-bold tracking-[0.06em] text-ink-400 uppercase">CPU / RAM</dt>
+          <dd class="text-[0.9375rem] font-bold text-ink-800" data-finder-compute>—</dd>
+        </div>
+        <div>
+          <dt class="text-[0.625rem] font-bold tracking-[0.06em] text-ink-400 uppercase">Storage</dt>
+          <dd class="text-[0.9375rem] font-bold text-ink-800" data-finder-storage>—</dd>
+        </div>
+        <div>
+          <dt class="text-[0.625rem] font-bold tracking-[0.06em] text-ink-400 uppercase">Backups</dt>
+          <dd class="text-[0.9375rem] font-bold text-ink-800" data-finder-backups>—</dd>
+        </div>
+      </dl>
+
+      <ul class="mt-4 flex flex-wrap gap-2" data-finder-highlights></ul>
+
+      <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <a
+          href={affiliateUrl({ placement: 'tool-result', campaign: 'plan-finder' })}
+          target="_blank"
+          rel="sponsored nofollow noopener"
+          data-affiliate="true"
+          data-placement="tool-result"
+          data-finder-cta
+          class="btn btn-primary btn-lg"
+        >
+          Claim this deal
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4 opacity-80" aria-hidden="true">
+            <path d="M7 4h9v9M16 4 6.5 13.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+        <a href="/pricing/" class="btn btn-outline btn-lg">Compare all plans</a>
+      </div>
+
+      <div class="mt-4 border-t border-brand-100 pt-4">
+        <p class="text-[0.75rem] font-semibold text-ink-600">Also worth considering</p>
+        <ul class="mt-2 flex flex-wrap gap-2" data-finder-runners-up></ul>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      data-finder-restart
+      class="mt-3 text-[0.8125rem] font-semibold text-brand-700 underline decoration-brand-300 underline-offset-2 hover:decoration-brand-600"
+    >
+      Start over
+    </button>
+  </div>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+
+  type PlanPayload = {
+    slug: string;
+    name: string;
+    group: string;
+    tagline: string;
+    badge: string | null;
+    rating: number;
+    promo: number;
+    regular: number;
+    renewal: number;
+    term: string;
+    termMonths: number;
+    specs: { websites: string; cores: string; ram: string; storage: string; backups: string };
+    highlights: string[];
+  };
+
+  const root = document.querySelector<HTMLElement>('[data-plan-finder]');
+  if (root) {
+    const payloadEl = root.querySelector<HTMLScriptElement>('[data-plans-payload]');
+    const PLANS: PlanPayload[] = payloadEl?.textContent ? JSON.parse(payloadEl.textContent) : [];
+
+    const questions = Array.from(root.querySelectorAll<HTMLFieldSetElement>('[data-finder-question]'));
+    const progress = root.querySelector<HTMLElement>('[data-finder-progress]');
+    const stepLabel = root.querySelector<HTMLElement>('[data-finder-step-label]');
+    const backBtn = root.querySelector<HTMLButtonElement>('[data-finder-back]');
+    const nav = root.querySelector<HTMLElement>('[data-finder-nav]');
+    const result = root.querySelector<HTMLElement>('[data-finder-result]');
+
+    const answers: Record<string, string> = {};
+    let index = 0;
+
+    const reduceMotion =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+    function render() {
+      questions.forEach((q, i) => {
+        q.hidden = i !== index;
+      });
+      if (progress) progress.style.width = `${(index / questions.length) * 100}%`;
+      if (stepLabel) stepLabel.textContent = `Step ${index + 1} of ${questions.length}`;
+      backBtn?.classList.toggle('invisible', index === 0);
+    }
+
+    function showResult() {
+      questions.forEach((q) => (q.hidden = true));
+      nav?.classList.add('hidden');
+      if (progress) progress.style.width = '100%';
+      if (stepLabel) stepLabel.textContent = 'Done';
+
+      const rec = recommend(answers);
+
+      const set = (sel: string, value: string) => {
+        const el = root!.querySelector<HTMLElement>(sel);
+        if (el) el.textContent = value;
+      };
+
+      set('[data-finder-plan-name]', rec.plan.name);
+      set('[data-finder-reason]', rec.reason);
+      set('[data-finder-price]', `$${rec.plan.promo.toFixed(2)}/mo`);
+      set('[data-finder-compute]', `${rec.plan.specs.cores} core(s) · ${rec.plan.specs.ram}`);
+      set('[data-finder-storage]', rec.plan.specs.storage);
+      set('[data-finder-backups]', rec.plan.specs.backups);
+
+      const cta = root!.querySelector<HTMLAnchorElement>('[data-finder-cta]');
+      if (cta) {
+        const base = cta.href.split('&sub_id=')[0];
+        cta.href = `${base}&sub_id=tool-result__${rec.plan.slug}`;
+      }
+
+      const highlights = root!.querySelector<HTMLElement>('[data-finder-highlights]');
+      if (highlights) {
+        highlights.innerHTML = rec.plan.highlights
+          .map(
+            (h) =>
+              `<li class="rounded-lg border border-brand-100 bg-white px-2.5 py-1.5 text-[0.75rem] font-medium text-ink-700">${h}</li>`,
+          )
+          .join('');
+      }
+
+      const runnersUp = root!.querySelector<HTMLElement>('[data-finder-runners-up]');
+      if (runnersUp) {
+        runnersUp.innerHTML = rec.runnersUp
+          .map(
+            (p) =>
+              `<li><a href="/plans/${p.slug}/" class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 py-1.5 text-[0.75rem] font-semibold text-ink-700 transition hover:border-brand-300 hover:text-brand-700">${p.name} <span class="text-ink-400">$${p.promo.toFixed(2)}/mo</span></a></li>`,
+          )
+          .join('');
+      }
+
+      if (result) {
+        result.hidden = false;
+        if (reduceMotion) {
+          gsap.set(result, { autoAlpha: 1, clearProps: 'transform' });
+        } else {
+          gsap.fromTo(
+            result,
+            { autoAlpha: 0, y: 18 },
+            { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power3.out', clearProps: 'transform' },
+          );
+        }
+      }
+
+      // Scroll the result into view without hijacking the whole page
+      result?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+    }
+
+    function recommend(a: Record<string, string>) {
+      const bySlug = (slug: string) => PLANS.find((p) => p.slug === slug);
+
+      let slug = 'unlimited';
+      const reasons: string[] = [];
+
+      if (a.skill === 'lots' || a.project === 'app') {
+        if (a.budget === 'power' || a.traffic === 'high' || a.traffic === 'spike') {
+          slug = 'kvm-4';
+          reasons.push(
+            'you want root access, and your traffic or workload justifies more than the entry VPS tier',
+          );
+        } else {
+          slug = 'kvm-2';
+          reasons.push(
+            'you asked for full control — a self-managed KVM box gives you root access at a much lower cost per GB of RAM than managed hosting',
+          );
+        }
+      } else if (a.project === 'store') {
+        if (a.traffic === 'high' || a.traffic === 'spike' || a.budget === 'power') {
+          slug = 'cloud-startup';
+          reasons.push(
+            'WooCommerce is resource-hungry and you expect real volume — 4 CPU cores, 4 GB RAM and a dedicated IP keep checkout fast',
+          );
+        } else {
+          slug = 'unlimited';
+          reasons.push(
+            'a small store needs daily backups and enough PHP workers to survive a sale — Unlimited covers both for $3.99/mo',
+          );
+        }
+      } else if (a.project === 'business') {
+        if (a.traffic === 'high' || a.traffic === 'spike') {
+          slug = 'cloud-startup';
+          reasons.push(
+            'an established business site with unpredictable traffic benefits from 4 cores, a dedicated IP and on-demand backups',
+          );
+        } else if (a.budget === 'cheapest') {
+          slug = 'premium';
+          reasons.push(
+            'three websites, a free domain and email are enough for a brochure site, and it is the cheapest tier Hostinger sells',
+          );
+        } else {
+          slug = 'unlimited';
+          reasons.push(
+            'the extra CPU core, daily backups and unlimited websites make this the best value step up from Premium',
+          );
+        }
+      } else {
+        // first website
+        if (a.budget === 'cheapest') {
+          slug = 'premium';
+          reasons.push(
+            'you want the lowest upfront cost, and 3 websites with a free domain and email is genuinely enough to start',
+          );
+        } else if (a.budget === 'power' || a.traffic === 'high') {
+          slug = 'cloud-startup';
+          reasons.push(
+            'you would rather not outgrow the plan — Cloud Startup gives you 4 cores and 100 GB NVMe from day one',
+          );
+        } else {
+          slug = 'unlimited';
+          reasons.push(
+            'for $1/mo more than Premium you get daily backups, a second CPU core and a dedicated IP — the best value in the range',
+          );
+        }
+      }
+
+      if (a.traffic === 'spike') {
+        reasons.push(
+          'and because your traffic is spiky, avoid the cheapest tier — CPU exhaustion is the usual cause of 503 errors',
+        );
+      }
+
+      const plan = bySlug(slug) ?? PLANS[0];
+
+      const runnersUp = PLANS.filter((p) => p.slug !== plan.slug)
+        .filter((p) => (a.skill === 'lots' ? p.group === 'vps' : p.group !== 'vps'))
+        .sort((a2, b) => {
+          const target = plan.promo;
+          return Math.abs(a2.promo - target) - Math.abs(b.promo - target);
+        })
+        .slice(0, 3);
+
+      return {
+        plan,
+        runnersUp,
+        reason: `We suggest the ${plan.name} plan because ${reasons.join(', and ')}.`,
+      };
+    }
+
+    /* ---- Wiring ------------------------------------------------------ */
+    root.querySelectorAll<HTMLButtonElement>('[data-finder-option]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const question = btn.dataset.question!;
+        answers[question] = btn.dataset.value!;
+
+        // Mark selection within this question group
+        root!
+          .querySelectorAll<HTMLButtonElement>(`[data-question="${question}"]`)
+          .forEach((sibling) => sibling.setAttribute('data-selected', String(sibling === btn)));
+
+        window.setTimeout(() => {
+          if (index < questions.length - 1) {
+            index += 1;
+            render();
+          } else {
+            showResult();
+          }
+        }, 160);
+      });
+    });
+
+    backBtn?.addEventListener('click', () => {
+      if (index > 0) {
+        index -= 1;
+        render();
+      }
+    });
+
+    root.querySelector('[data-finder-restart]')?.addEventListener('click', () => {
+      Object.keys(answers).forEach((k) => delete answers[k]);
+      root.querySelectorAll<HTMLButtonElement>('[data-finder-option]').forEach((b) =>
+        b.setAttribute('data-selected', 'false'),
+      );
+      index = 0;
+      if (result) result.hidden = true;
+      nav?.classList.remove('hidden');
+      render();
+      root.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    });
+
+    render();
+  }
+</script>
