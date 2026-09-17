@@ -16,8 +16,9 @@
     "check:links": "node scripts/check-links.mjs",
     "check:deploy": "node scripts/check-deploy-readiness.mjs",
     "check:data": "node scripts/check-structured-data.mjs",
+    "check:seo": "node scripts/check-onpage-seo.mjs",
     "check": "npm run check:deploy && npm run check:cms && npm run check:content",
-    "verify": "npm run check && npm run build && npm run check:links && npm run check:data",
+    "verify": "npm run check && npm run build && npm run check:links && npm run check:data && npm run check:seo",
     "icons": "node scripts/generate-icons.mjs",
     "normalize:reading-time": "node scripts/normalize-reading-time.mjs",
     "report:lengths": "node scripts/report-article-lengths.mjs"

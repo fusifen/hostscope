@@ -77,6 +77,24 @@ const blended = blendedMonthly(
 
 const verdictText = data.verdict.replace(/\s+/g, ' ').trim();
 
+/**
+ * Head tags for this page.
+ *
+ * Title: BaseHead appends " | HostScope" (12 chars) when the title does not
+ * already contain the brand. The previous suffix, "Specs, Price and Renewal
+ * Rate", pushed the longer plan names past 80 characters — well into the range
+ * Google truncates. This template keeps every plan under ~70 while retaining
+ * the price and renewal angle, which is what this site is about.
+ *
+ * Description: the tagline is already persuasive, authored copy between 100 and
+ * 139 characters. Appending "Full specs, intro price, renewal rate and our
+ * verdict on Hostinger X." produced 176–220 character descriptions that were
+ * always cut off mid-sentence. Editors can override either value per plan with
+ * seoTitle / seoDescription.
+ */
+const planTitle = data.seoTitle ?? `Hostinger ${data.name} Review 2026: Price & Renewal`;
+const planDescription = data.seoDescription ?? data.tagline;
+
 const schema = graph([
   organizationSchema(),
   breadcrumbSchema(breadcrumbs),
@@ -125,8 +143,8 @@ const specRows = [
 ---
 
 <BaseLayout
-  title={data.seoTitle ?? `Hostinger ${data.name} Review 2026: Specs, Price and Renewal Rate`}
-  description={data.seoDescription ?? `${data.tagline} Full specs, intro price, renewal rate and our verdict on Hostinger ${data.name}.`}
+  title={planTitle}
+  description={planDescription}
   canonical={url}
   schema={schema}
   image={`/og/plans-${plan.id}.png`}

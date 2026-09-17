@@ -1,6 +1,8 @@
 ---
 title: "Hostinger Free Domain: What You Get, and What It Costs After Year One"
 description: "Hostinger includes a free domain for one year with eligible plans — but the renewal price is where the real cost lives. Here are the actual first-year and renewal rates by TLD, and how to avoid the second-year surprise."
+seoTitle: "Hostinger Free Domain: What It Costs After Year One"
+seoDescription: "Hostinger includes a free domain for one year with eligible plans — but renewal is where the real cost lives. First-year and renewal rates by TLD."
 pubDate: 2026-03-04
 updatedDate: 2026-09-17
 author: "maya-ross"

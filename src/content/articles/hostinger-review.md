@@ -1,6 +1,7 @@
 ---
 title: "Hostinger Review 2026: 30 Days of Real Testing"
 description: "We spent 30 days on a Hostinger Premium and Unlimited account. Here is what the $2.99 price really buys, where the plan runs out of headroom, and who should look elsewhere."
+seoDescription: "We spent 30 days on Hostinger Premium and Unlimited. What the $2.99 price really buys, where the plans run out of headroom, and who should look elsewhere."
 pubDate: 2026-03-12
 updatedDate: 2026-09-15
 author: "maya-ross"

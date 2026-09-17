@@ -1,5 +1,5 @@
 ---
-name: Hostinger Website Builder
+name: Website Builder
 shortName: AI Builder
 group: builder
 tagline: Describe the site you want and let the AI build it, or drag it together by hand — with hosting, a domain and email bundled in.
