@@ -10,6 +10,10 @@
  *  5. Every field has a `name`, a `label` and a `widget`.
  *  6. `folder` / `file` paths point at directories/files that exist.
  *  7. media_folder exists on disk.
+ *  8. No option Sveltia rejects or silently ignores (`fields.`-prefixed
+ *     `sortable_fields` entries, the unsupported `locale` option).
+ *  9. index.html can actually boot Sveltia: classic script tag, no CDN, and the
+ *     vendored bundle plus its lazy chunk are present on disk.
  */
 
 import { readFileSync, existsSync, statSync } from 'node:fs';
@@ -287,6 +291,101 @@ if (doc.media_folder) {
   const mediaDir = resolve(ROOT, doc.media_folder);
   if (!existsSync(mediaDir)) {
     warnings.push(`media_folder "${doc.media_folder}" does not exist yet (Sveltia will create it)`);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 7. Options Sveltia rejects or silently ignores
+ * ------------------------------------------------------------------ */
+
+/**
+ * Sveltia validates the config itself and refuses to render the editor when it
+ * finds an error — it shows "Errors found in configuration" in the console and
+ * nothing else. The page then looks exactly like a CMS that failed to boot.
+ *
+ * `sortable_fields` is the trap. Decap/Netlify CMS documents nested fields with
+ * a `fields.` prefix, but Sveltia reads each entry as a literal field *name*:
+ *
+ *   sortable_fields: ['order', 'fields.pricing.promoMonthly']   <- Sveltia error
+ *   sortable_fields: ['order', 'pricing.promoMonthly']          <- correct
+ *
+ * Sveltia: "The `sortable_fields` option refers to a field named
+ * `fields.pricing.promoMonthly`, but no such field is defined in the collection."
+ */
+for (const collection of doc.collections ?? []) {
+  for (const entry of collection.sortable_fields ?? []) {
+    if (typeof entry === 'string' && entry.startsWith('fields.')) {
+      problems.push(
+        `collection "${collection.name}": sortable_fields entry "${entry}" uses a "fields." prefix. ` +
+          `Sveltia reads entries as literal field names and refuses to load. ` +
+          `Use "${entry.replace(/^fields\./, '')}".`,
+      );
+    }
+  }
+}
+
+// `locale` is a Decap option Sveltia does not implement. It is ignored, but it
+// logs two warnings on every page load.
+if ('locale' in doc) {
+  warnings.push(
+    'the `locale` option is not supported by Sveltia (it is ignored and logs two ' +
+      'warnings on every load). Remove it; the UI language follows the browser.',
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * 8. The admin page must actually be able to boot Sveltia
+ * ------------------------------------------------------------------ */
+
+/**
+ * Both of these have bitten this project, and neither produces any error the
+ * build or the browser would show you.
+ */
+const ADMIN_HTML = resolve(ROOT, 'public/admin/index.html');
+
+if (!existsSync(ADMIN_HTML)) {
+  problems.push('public/admin/index.html is missing — /admin/ would 404.');
+} else {
+  const rawHtml = readFileSync(ADMIN_HTML, 'utf8');
+  // Strip HTML comments first. This file documents the very traps being checked
+  // for, so the prose contains `import('./sveltia-cms.js')` and
+  // `<script type="module" src="...">` as examples — matching those would make
+  // the guard fire on its own documentation.
+  const html = rawHtml.replace(/<!--[\s\S]*?-->/g, '');
+
+  // Sveltia's bundle is a classic script, not an ES module. Loading it with
+  // `type="module"` or a dynamic `import()` downloads it, runs it far enough to
+  // fetch config.yml, then never mounts and logs nothing.
+  const moduleLoad = /<script[^>]*type=["']module["'][^>]*src=["'][^"']*sveltia-cms/i.test(html);
+  const dynamicImport = /import\(\s*["'][^"']*sveltia-cms/i.test(html);
+  const classicLoad = /<script(?![^>]*type=)[^>]*src=["'][^"']*sveltia-cms\.js["']/i.test(html);
+
+  if (moduleLoad || dynamicImport) {
+    problems.push(
+      'public/admin/index.html loads sveltia-cms.js as an ES module (type="module" or ' +
+        'import()). Sveltia then never mounts and logs nothing. Use a classic <script src>.',
+    );
+  } else if (!classicLoad) {
+    problems.push('public/admin/index.html does not load sveltia-cms.js at all.');
+  }
+
+  // A CDN reference means /admin/ cannot boot behind a firewall — unpkg.com is
+  // unreachable from mainland China.
+  if (/<script[^>]*src=["']https?:\/\//i.test(html)) {
+    problems.push(
+      'public/admin/index.html loads a script from an external URL. Self-host the ' +
+        'Sveltia bundle so /admin/ works on any network.',
+    );
+  }
+}
+
+// The vendored bundle must be present, including the lazily-loaded chunk.
+for (const rel of ['public/admin/sveltia-cms.js', 'public/admin/chunks/react-dom.js']) {
+  if (!existsSync(resolve(ROOT, rel))) {
+    problems.push(
+      `${rel} is missing. Run: npm pack @sveltia/cms@<version>, then copy ` +
+        `package/dist/sveltia-cms.js and package/dist/chunks/react-dom.js into public/admin/.`,
+    );
   }
 }
 

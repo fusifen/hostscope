@@ -42,7 +42,7 @@
       }
       #cms-boot p {
         margin: 0;
-        max-width: 420px;
+        max-width: 460px;
         font-size: 13px;
         line-height: 1.6;
         color: #5f6a89;
@@ -53,6 +53,44 @@
         padding: 1px 5px;
         font-size: 12px;
         color: #5527c4;
+      }
+      #cms-boot.is-failed h1 {
+        color: #b42318;
+      }
+      #cms-boot.is-failed #cms-spinner {
+        display: none;
+      }
+      #cms-spinner {
+        width: 22px;
+        height: 22px;
+        border: 2px solid #d9dced;
+        border-top-color: #673de6;
+        border-radius: 50%;
+        animation: cms-spin 0.8s linear infinite;
+      }
+      @keyframes cms-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      #cms-detail {
+        display: none;
+        max-width: 620px;
+        margin: 0;
+        padding: 12px 14px;
+        border: 1px solid #f3c9c4;
+        border-radius: 8px;
+        background: #fff5f4;
+        color: #7a271a;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        text-align: left;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      #cms-detail.is-shown {
+        display: block;
       }
     </style>
   </head>
@@ -73,35 +111,155 @@
           `<worker-url>/callback`, then set `backend.base_url` to the Worker URL.
 
       See DEPLOY.md for the full runbook.
+
+      ── Two traps that make this page fail silently ──────────────────────────
+
+      1. The bundle must load as a CLASSIC script, not an ES module.
+         `<script type="module" src="./sveltia-cms.js">` — or a dynamic
+         `import('./sveltia-cms.js')` — loads without error and even fetches
+         config.yml, but Sveltia never mounts and nothing is logged. The bundle
+         itself warns about this: "The Sveltia CMS script is not an ES module.
+         Remove the type="module" attribute." Keep the plain <script> below.
+
+      2. It must be served from this origin, not from a CDN. The upstream CDN
+         (unpkg.com) is unreachable from mainland China, which leaves the editor
+         stuck on the splash with no error. Sveltia resolves its lazy chunks
+         relative to `document.currentScript.src`, so self-hosting keeps those
+         same-origin too.
+
+      To upgrade: `npm pack @sveltia/cms@<version>`, then copy
+      `package/dist/sveltia-cms.js` and `package/dist/chunks/react-dom.js` here
+      (strip the trailing `//# sourceMappingURL=` lines — the maps are not shipped).
     -->
     <div id="cms-boot">
-      <img src="/images/brand/hostscope-logo.svg" alt="" />
-      <h1>Loading the content manager…</h1>
-      <p>
-        If this message stays on screen, Sveltia could not start. Check that
-        <code>backend.repo</code> in <code>/admin/config.yml</code> names the correct GitHub
-        repository.
+      <img src="/images/brand/hostscope-logo.svg" alt="" onerror="this.remove()" />
+      <div id="cms-spinner" role="status" aria-label="Loading"></div>
+      <h1 id="cms-title">Loading the content manager…</h1>
+      <p id="cms-hint">
+        This usually takes a second. Sveltia reads <code>config.yml</code>, then resolves
+        the GitHub repository before it renders anything.
       </p>
-      <p>
-        To sign in, click <strong>Sign In with Token</strong> and paste a GitHub personal access
-        token with <code>Contents: Read and write</code> on that repository — no OAuth server
-        required. For a hosted login instead, set <code>backend.base_url</code> to a deployed
-        <code>sveltia-cms-auth</code> Worker.
-      </p>
+      <pre id="cms-detail"></pre>
     </div>
 
+    <!--
+      Classic script on purpose — see trap 1 above. `defer` so the splash paints
+      first instead of blocking on a 1.9 MB download.
+    -->
+    <script>
+      window.__cmsBundleError = null;
+    </script>
+    <script
+      src="./sveltia-cms.js"
+      defer
+      onerror="window.__cmsBundleError = 'sveltia-cms.js failed to load (HTTP error or network failure)'"
+    ></script>
+
     <script type="module">
-      // Swap the boot screen for the CMS once it has mounted.
       const boot = document.getElementById('cms-boot');
-      window.addEventListener('sveltia-cms-loaded', () => boot?.remove());
-      // Fallback: hide the splash shortly after the module resolves.
-      import('https://unpkg.com/@sveltia/cms@0.213.5/dist/sveltia-cms.js')
-        .then(() => {
-          window.setTimeout(() => boot?.remove(), 600);
-        })
-        .catch(() => {
-          /* leave the boot message in place so the failure is visible */
-        });
+      const titleEl = document.getElementById('cms-title');
+      const hintEl = document.getElementById('cms-hint');
+      const detailEl = document.getElementById('cms-detail');
+
+      let ready = false;
+
+      /** Sveltia has rendered — get the splash out of the way. */
+      function settle() {
+        if (ready) return;
+        ready = true;
+        window.clearInterval(poll);
+        window.clearTimeout(deadline);
+        boot?.remove();
+      }
+
+      function fail(title, hint, detail) {
+        if (ready) return;
+        ready = true;
+        window.clearInterval(poll);
+        window.clearTimeout(deadline);
+        boot?.classList.add('is-failed');
+        titleEl.textContent = title;
+        hintEl.innerHTML = hint;
+        if (detail) {
+          detailEl.textContent = detail;
+          detailEl.classList.add('is-shown');
+        }
+      }
+
+      // ── Readiness ──────────────────────────────────────────────────────────
+      // Do NOT remove the splash on a fixed timer. Sveltia has to fetch
+      // config.yml and resolve the repository before it paints, which can easily
+      // outlast any timeout short enough to feel responsive. Dropping the splash
+      // early leaves a blank white page — which is exactly what a stuck CMS looks
+      // like to the person using it.
+      //
+      // Every Svelte component carries a scoped class such as `svelte-1u7mtuj`,
+      // so the first one to appear means the app has mounted (its own error
+      // screen counts too, and should be left visible).
+      const poll = window.setInterval(() => {
+        if (!document.body.contains(boot)) settle();
+        else if (document.querySelector('[class*="svelte-"]')) settle();
+      }, 200);
+
+      const deadline = window.setTimeout(diagnose, 15000);
+
+      // ── Diagnosis ──────────────────────────────────────────────────────────
+      async function diagnose() {
+        if (ready) return;
+
+        if (window.__cmsBundleError) {
+          fail(
+            'The CMS bundle failed to load',
+            '<code>/admin/sveltia-cms.js</code> could not be fetched. If this site was ' +
+              'just deployed, wait for the build to finish and reload.',
+            window.__cmsBundleError,
+          );
+          return;
+        }
+
+        // The single config value that silently hangs Sveltia: a placeholder repo.
+        // It resolves `backend.repo` before rendering, so a value that is not a real
+        // repository means it waits forever without ever showing an error.
+        let repo = null;
+        let configOk = false;
+        try {
+          const res = await fetch('./config.yml', { cache: 'no-store' });
+          if (res.ok) {
+            configOk = true;
+            repo = (await res.text()).match(/^[ \t]*repo:[ \t]*(\S+)[ \t]*$/m)?.[1] ?? null;
+          }
+        } catch {
+          /* fall through to the generic message */
+        }
+
+        if (configOk && repo && /^(your-|owner\/|<|.*your-github)/i.test(repo)) {
+          fail(
+            'The CMS cannot start: backend.repo is still a placeholder',
+            'Sveltia resolves the repository before it renders anything, so it waits forever ' +
+              'rather than showing an error. Set <code>backend.repo</code> in ' +
+              '<code>/admin/config.yml</code> to your real repository, then redeploy.',
+            `config.yml currently says:\n  repo: ${repo}\n\nExpected something like:\n  repo: fusifen/hostscope`,
+          );
+          return;
+        }
+
+        if (configOk && !repo) {
+          fail(
+            'The CMS cannot start: config.yml has no backend.repo',
+            'Add <code>backend.repo</code> as <code>owner/repo</code> in ' +
+              '<code>/admin/config.yml</code>, then redeploy.',
+            'Could not find a top-level `repo:` key under `backend:`.',
+          );
+          return;
+        }
+
+        fail(
+          'The CMS did not start',
+          'The bundle loaded but never rendered. Open the browser console for the ' +
+            'underlying error — Sveltia prints configuration problems there.',
+          `config.yml reachable: ${configOk}\nbackend.repo: ${repo ?? '(not found)'}\nsveltia-cms.js: /admin/sveltia-cms.js`,
+        );
+      }
     </script>
   </body>
 </html>

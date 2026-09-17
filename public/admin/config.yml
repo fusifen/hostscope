@@ -72,7 +72,9 @@ display_url: https://hostscope.io
 # Relative on purpose: the logo then resolves on whatever host serves /admin/,
 # including a Cloudflare Pages preview URL, without editing this file.
 logo_url: /images/brand/hostscope-logo.svg
-locale: en
+# No `locale` option. Sveltia does not implement it — it logs "The `locale` option
+# is not supported in Sveltia CMS. It will be ignored." on every load, and the UI
+# language follows the browser. Setting it here only adds console noise.
 
 # ── Media library ───────────────────────────────────────────────────────────
 media_folder: public/images/uploads
@@ -344,7 +346,7 @@ collections:
     preview_path: 'plans/{{slug}}'
     identifier_field: name
     summary: '{{name}}  ·  ${{fields.pricing.promoMonthly}}/mo  ·  renews ${{fields.pricing.renewalMonthly}}'
-    sortable_fields: ['order', 'name', 'fields.pricing.promoMonthly']
+    sortable_fields: ['order', 'name', 'pricing.promoMonthly']
     fields:
       - { label: Plan name, name: name, widget: string }
       - { label: Short name, name: shortName, widget: string, required: false }
