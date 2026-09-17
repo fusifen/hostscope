@@ -153,8 +153,9 @@ if (existsSync(resolve(ROOT, cmsPath))) {
   }
   if (!/^\s*base_url:/m.test(cms.replace(/^\s*#.*$/gm, ''))) {
     warnings.push(
-      'public/admin/config.yml has no active base_url — GitHub OAuth needs an OAuth broker ' +
-        'before /admin/ can authenticate on the deployed site.',
+      'public/admin/config.yml has no active base_url. Token sign-in still works, but the ' +
+        'hosted GitHub OAuth flow needs a deployed sveltia-cms-auth Worker and base_url ' +
+        'pointed at it.',
     );
   }
 }

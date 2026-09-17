@@ -64,19 +64,29 @@
       and commits content straight back to the GitHub repository, so there is no
       database and no server to maintain.
 
-      Before it will work you must:
-        1. Set `backend.repo` in config.yml to your own GitHub repository.
-        2. Deploy an OAuth broker (see the README) and point `backend.base_url` at it,
-           OR use `backend.name: git-gateway` with Netlify Identity.
-        3. Add your site's domain as an allowed origin on the OAuth app.
+      `backend.repo` in config.yml is already set to fusifen/hostscope. To sign in:
+
+        • Token (no setup): click "Sign In with Token" and paste a GitHub PAT with
+          `Contents: Read and write` on that repository.
+        • OAuth (for teams): deploy https://github.com/sveltia/sveltia-cms-auth to
+          Cloudflare Workers, register a GitHub OAuth app with callback
+          `<worker-url>/callback`, then set `backend.base_url` to the Worker URL.
+
+      See DEPLOY.md for the full runbook.
     -->
     <div id="cms-boot">
       <img src="/images/brand/hostscope-logo.svg" alt="" />
       <h1>Loading the content manager…</h1>
       <p>
-        If this message stays on screen, Sveltia could not reach GitHub. Check that
-        <code>backend.repo</code> in <code>/admin/config.yml</code> points at your repository and
-        that an OAuth broker is configured.
+        If this message stays on screen, Sveltia could not start. Check that
+        <code>backend.repo</code> in <code>/admin/config.yml</code> names the correct GitHub
+        repository.
+      </p>
+      <p>
+        To sign in, click <strong>Sign In with Token</strong> and paste a GitHub personal access
+        token with <code>Contents: Read and write</code> on that repository — no OAuth server
+        required. For a hosted login instead, set <code>backend.base_url</code> to a deployed
+        <code>sveltia-cms-auth</code> Worker.
       </p>
     </div>
 

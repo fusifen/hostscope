@@ -6,17 +6,22 @@
 #  GitHub repository. No database, no server, no build step on your machine.
 #
 #  ── Getting it working ─────────────────────────────────────────────────────
-#  1. Change `backend.repo` below to your own `owner/repository`.
-#  2. Authentication. Pick ONE:
-#       a) GitHub + OAuth broker (recommended)
-#            Deploy the tiny `sveltia-cms-auth` Cloudflare Worker
-#            (https://github.com/sveltia/sveltia-cms-auth), then set
-#            `base_url` to the Worker URL. Register a GitHub OAuth App with the
-#            Worker URL as its callback.
-#       b) Netlify Identity + Git Gateway
-#            Set `backend.name: git-gateway` and enable Identity + Git Gateway
-#            in your Netlify site settings.
-#  3. Visit /admin/ on your deployed site and sign in with GitHub.
+#  `backend.repo` is already set to fusifen/hostscope. If you fork this project,
+#  that is the first line to change — and the most common cause of a CMS that
+#  hangs on "Loading the content manager…".
+#
+#  Authentication. Pick ONE:
+#    a) Access token — zero setup, works immediately
+#         Open /admin/, click "Sign In with Token", and paste a fine-grained
+#         GitHub PAT with `Contents: Read and write` on this repository.
+#         Best for a solo operator or a small trusted team.
+#    b) GitHub OAuth — required for non-technical editors
+#         Deploy https://github.com/sveltia/sveltia-cms-auth to Cloudflare
+#         Workers (one-click deploy button in that repo), register a GitHub
+#         OAuth app with callback `<worker-url>/callback`, then uncomment
+#         `backend.base_url` below and set it to the Worker URL.
+#
+#  Then visit /admin/ on the deployed site and sign in.
 #
 #  ── Field types at a glance ────────────────────────────────────────────────
 #    string | text | markdown | number | boolean | datetime | select
@@ -29,11 +34,28 @@
 
 backend:
   name: github
-  # ↓↓↓ CHANGE THIS to your own repository ↓↓↓
-  repo: your-github-user/hostscope
+  # Must be exactly `owner/repo` in the form GitHub uses. A wrong value here is
+  # the single most common reason the CMS hangs on its loading screen.
+  repo: fusifen/hostscope
   branch: main
-  # Uncomment and point at your OAuth broker (see step 2a above):
-  # base_url: https://your-sveltia-auth-worker.workers.dev
+  # ── Authentication ────────────────────────────────────────────────────────
+  # Option A — no setup at all (works right now):
+  #   Leave `base_url` unset and click "Sign In with Token" on the login screen.
+  #   Generate a fine-grained PAT with `Contents: Read and write` on this repo
+  #   and paste it in. Best for a solo operator or a small trusted team.
+  #
+  # Option B — proper GitHub OAuth (needed for non-technical editors):
+  #   1. Deploy https://github.com/sveltia/sveltia-cms-auth to Cloudflare
+  #      Workers (one-click deploy button in that repo's README).
+  #   2. Register a GitHub OAuth app with callback
+  #      https://<your-worker>.workers.dev/callback
+  #   3. Set GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET on the Worker, plus
+  #      ALLOWED_DOMAINS to this site's hostname.
+  #   4. Uncomment the line below and replace it with the Worker URL.
+  #
+  # Without either option the login screen cannot complete, which looks like
+  # "the CMS is broken" but is really just missing credentials.
+  # base_url: https://sveltia-cms-auth.<your-subdomain>.workers.dev
   commit_messages:
     create: 'content: add {{collection}} "{{slug}}"'
     update: 'content: update {{collection}} "{{slug}}"'
@@ -42,9 +64,14 @@ backend:
     deleteMedia: 'content: delete media "{{path}}"'
 
 # ── Site metadata shown in the CMS UI ────────────────────────────────────────
+# `site_url` powers the CMS's "View site" link. Keep it in step with SITE.url in
+# `src/consts.ts` — if the two disagree, one of them is lying about where the
+# site lives. Update both when the real domain is attached.
 site_url: https://hostscope.io
 display_url: https://hostscope.io
-logo_url: https://hostscope.io/images/brand/hostscope-logo.svg
+# Relative on purpose: the logo then resolves on whatever host serves /admin/,
+# including a Cloudflare Pages preview URL, without editing this file.
+logo_url: /images/brand/hostscope-logo.svg
 locale: en
 
 # ── Media library ───────────────────────────────────────────────────────────

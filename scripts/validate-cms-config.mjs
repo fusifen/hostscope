@@ -138,7 +138,10 @@ if (doc.backend) {
   }
   if (doc.backend.name === 'github' && !doc.backend.base_url) {
     warnings.push(
-      'backend.base_url is not set — GitHub OAuth needs an OAuth broker (e.g. a Cloudflare Worker) before the CMS can log in on the deployed site'
+      'backend.base_url is not set. That is fine if editors sign in with a personal access ' +
+        'token ("Sign In with Token"), which needs no infrastructure. If non-technical editors ' +
+        'must log in with GitHub, deploy a sveltia-cms-auth Worker and set base_url to its URL — ' +
+        'without it the hosted OAuth flow cannot complete.',
     );
   }
 }
@@ -149,6 +152,42 @@ if (doc.backend) {
 
 const FOLDER_COLLECTIONS = ['articles', 'plans', 'comparisons'];
 const seenNames = new Set();
+
+/**
+ * Widgets Sveltia CMS actually implements. An unrecognised widget does not
+ * throw — the field silently fails to render, which is far harder to debug
+ * than a hard error, so it is worth catching here.
+ */
+const KNOWN_WIDGETS = new Set([
+  'string',
+  'text',
+  'markdown',
+  'richtext',
+  'number',
+  'boolean',
+  'datetime',
+  'date',
+  'select',
+  'image',
+  'file',
+  'list',
+  'object',
+  'relation',
+  'uuid',
+  'color',
+  'hidden',
+  'map',
+  'code',
+  'keyvalue',
+]);
+
+/**
+ * In Sveltia/Decap the markdown body is not just another field — it must be
+ * named `body` and use a body-capable widget. A collection with no `body`
+ * field gives the editor no way to write prose, which is easy to miss because
+ * the CMS still renders perfectly.
+ */
+const BODY_WIDGETS = new Set(['markdown', 'richtext', 'text', 'code']);
 
 function walkFields(fields, collectionName, path = '') {
   if (!Array.isArray(fields)) {
@@ -164,14 +203,29 @@ function walkFields(fields, collectionName, path = '') {
     if (!field.name) problems.push(`Collection "${collectionName}": a field is missing "name"`);
     if (!field.label) problems.push(`${where}: missing "label"`);
     if (!field.widget) problems.push(`${where}: missing "widget"`);
+
+    if (field.widget && !KNOWN_WIDGETS.has(field.widget)) {
+      problems.push(
+        `${where}: unknown widget "${field.widget}" — Sveltia will not render this field`,
+      );
+    }
+    if (field.name === 'body' && field.widget && !BODY_WIDGETS.has(field.widget)) {
+      problems.push(
+        `${where}: the body field must use a body widget (markdown/richtext/text/code), got "${field.widget}"`,
+      );
+    }
+
     if (field.widget === 'object' || field.widget === 'list') {
       if (field.fields) walkFields(field.fields, collectionName, `${path}.${field.name ?? ''}`);
     }
     if (field.widget === 'select' && !field.options && !field.options_map) {
       problems.push(`${where}: select widget has no options`);
     }
-    if (field.required && field.default === undefined && field.widget === 'select' && field.options) {
-      // fine
+    if (field.widget === 'relation' && !field.collection) {
+      problems.push(`${where}: relation widget has no "collection"`);
+    }
+    if (field.widget === 'datetime' || field.widget === 'date') {
+      if (!field.date_format) warnings.push(`${where}: no date_format set`);
     }
   }
 }
@@ -209,7 +263,20 @@ for (const collection of doc.collections ?? []) {
     }
   }
 
-  if (collection.fields) walkFields(collection.fields, name, '');
+  if (collection.fields) {
+    walkFields(collection.fields, name, '');
+
+    // A folder collection of Markdown files needs a body field, or editors
+    // cannot write the prose the site is built around.
+    if (collection.folder && collection.extension === 'md') {
+      const hasBody = (collection.fields ?? []).some((f) => f?.name === 'body');
+      if (!hasBody) {
+        problems.push(
+          `Collection "${name}": no field named "body" — editors will have nowhere to write the Markdown body`,
+        );
+      }
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ *

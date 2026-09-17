@@ -71,15 +71,58 @@ Point the domain at the Pages project, then update `SITE.url` in
 feed and every OG image URL — if it is wrong, search engines are told the
 canonical version of every page lives somewhere else.
 
-## The CMS will not log in yet
+## The content manager at /admin/
 
-`/admin/` loads, but Sveltia cannot authenticate until you:
+`backend.repo` is already set to `fusifen/hostscope`, so the CMS knows where the
+content lives. The remaining question is how you sign in. There are two ways,
+and you only need one.
 
-1. Replace `backend.repo` in `public/admin/config.yml` with `fusifen/hostscope`.
-2. Deploy an OAuth broker — [sveltia/sveltia-cms-auth](https://github.com/sveltia/sveltia-cms-auth)
-   on Cloudflare Workers is the path of least resistance, since you are already
-   on Cloudflare.
-3. Set `base_url` in `public/admin/config.yml` to the Worker URL.
-4. Register a GitHub OAuth App with the Worker URL as its callback.
+### Option A — access token (no setup, works now)
 
-`npm run check:deploy` warns about both of these until they are done.
+1. Open `https://<your-site>/admin/`.
+2. Click **Sign In with Token**.
+3. Generate a GitHub **fine-grained** personal access token scoped to
+   `fusifen/hostscope` with **Contents: Read and write**, and paste it in.
+
+The token is stored in the browser's local storage and used for every subsequent
+request. Nothing to deploy, nothing to register. This is the right choice for a
+solo operator or a small trusted team.
+
+### Option B — GitHub OAuth (for non-technical editors)
+
+Token sign-in asks every editor to create a GitHub token, which is too much to
+ask of a writer. For a hosted login button:
+
+1. Deploy [sveltia/sveltia-cms-auth](https://github.com/sveltia/sveltia-cms-auth)
+   to Cloudflare Workers — there is a one-click deploy button in that repo's
+   README, or clone it and run `wrangler deploy`.
+2. Register a GitHub OAuth app at <https://github.com/settings/applications/new>
+   with **Authorization callback URL** = `https://<your-worker>.workers.dev/callback`.
+3. On the Worker, set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (encrypt the
+   secret), plus `ALLOWED_DOMAINS` set to your site's hostname. `ALLOWED_DOMAINS`
+   is optional but is what stops other sites from using your Worker to obtain
+   tokens — set it.
+4. Uncomment `base_url` in `public/admin/config.yml` and set it to the Worker URL:
+   `https://<your-worker>.workers.dev`.
+5. Commit and redeploy.
+
+### If /admin/ hangs on "Loading the content manager…"
+
+That screen means Sveltia started but could not reach the repository. In order
+of likelihood:
+
+1. **`backend.repo` is wrong.** It must be exactly `owner/repo` as GitHub spells
+   it. This is the most common cause.
+2. **The repository is private and the token lacks `Contents: Read and write`.**
+   A fine-grained token defaults to read-only on public repos and no access at
+   all on private ones.
+3. **Neither auth method is configured.** With no `base_url`, only token sign-in
+   works — the hosted OAuth flow needs a broker.
+4. **The browser blocked the unpkg script.** The CMS itself is loaded from
+   `https://unpkg.com/@sveltia/cms@0.213.5/dist/sveltia-cms.js`; an ad blocker or
+   a restrictive CSP will stop it. The boot screen stays because the module never
+   resolved.
+
+`npm run check:cms` validates the config structure, and `npm run check:deploy`
+flags the auth and domain placeholders.
+
