@@ -143,9 +143,11 @@ if (doc.backend) {
   if (doc.backend.name === 'github' && !doc.backend.base_url) {
     warnings.push(
       'backend.base_url is not set. That is fine if editors sign in with a personal access ' +
-        'token ("Sign In with Token"), which needs no infrastructure. If non-technical editors ' +
-        'must log in with GitHub, deploy a sveltia-cms-auth Worker and set base_url to its URL — ' +
-        'without it the hosted OAuth flow cannot complete.',
+        'token ("Sign In Using Access Token"), which needs no infrastructure. But the ' +
+        '"Sign In with GitHub" button will fail: with no base_url Sveltia falls back to ' +
+        'Netlify\'s OAuth broker (api.netlify.com/auth), which has no site for this hostname ' +
+        'and returns "Not Found". To enable it, deploy the sveltia-cms-auth Worker and set ' +
+        'base_url to its URL. See DEPLOY.md -> Option B.',
     );
   }
 }

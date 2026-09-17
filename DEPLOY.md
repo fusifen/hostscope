@@ -109,18 +109,45 @@ solo operator or a small trusted team.
 Token sign-in asks every editor to create a GitHub token, which is too much to
 ask of a writer. For a hosted login button:
 
-1. Deploy [sveltia/sveltia-cms-auth](https://github.com/sveltia/sveltia-cms-auth)
-   to Cloudflare Workers — there is a one-click deploy button in that repo's
-   README, or clone it and run `wrangler deploy`.
-2. Register a GitHub OAuth app at <https://github.com/settings/applications/new>
-   with **Authorization callback URL** = `https://<your-worker>.workers.dev/callback`.
-3. On the Worker, set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (encrypt the
-   secret), plus `ALLOWED_DOMAINS` set to your site's hostname. `ALLOWED_DOMAINS`
-   is optional but is what stops other sites from using your Worker to obtain
-   tokens — set it.
-4. Uncomment `base_url` in `public/admin/config.yml` and set it to the Worker URL:
-   `https://<your-worker>.workers.dev`.
-5. Commit and redeploy.
+1. **Deploy the Worker.** Clone
+   [sveltia/sveltia-cms-auth](https://github.com/sveltia/sveltia-cms-auth) and
+   run `wrangler deploy`, or use the *Deploy to Cloudflare Workers* button in
+   that repo. It is **self-hosted by design** — there is no hosted service.
+   Note the resulting URL: `https://sveltia-cms-auth.<subdomain>.workers.dev`.
+
+2. **Register a GitHub OAuth App** at
+   <https://github.com/settings/applications/new>:
+
+   | Field | Value |
+   |---|---|
+   | Application name | `Sveltia CMS Authenticator` |
+   | Homepage URL | `https://hostscope-2et.pages.dev` |
+   | Authorization callback URL | `https://sveltia-cms-auth.<subdomain>.workers.dev/callback` |
+
+   The callback is the **Worker** URL followed by `/callback` — not your site.
+   Generate a client secret afterwards.
+
+3. **Set the Worker's environment variables** (Settings → Variables):
+
+   | Variable | Value |
+   |---|---|
+   | `GITHUB_CLIENT_ID` | from step 2 |
+   | `GITHUB_CLIENT_SECRET` | from step 2 — click **Encrypt** |
+   | `ALLOWED_DOMAINS` | `hostscope-2et.pages.dev` |
+
+   `ALLOWED_DOMAINS` is optional but set it: it stops other sites using your
+   Worker at your expense, and stops them obtaining a token through it. Accepts
+   comma-separated hostnames, and `*` to match any subdomain.
+
+4. **Point the CMS at it.** Uncomment `base_url` in `public/admin/config.yml`
+   and set it to the Worker URL:
+
+   ```yaml
+   base_url: https://sveltia-cms-auth.<subdomain>.workers.dev
+   ```
+
+5. Commit and redeploy. `npm run check:cms` stops flagging the missing
+   `base_url` warning once it is set.
 
 ### If /admin/ shows a blank or stuck page
 
@@ -139,11 +166,30 @@ produce a blank screen with no error at all:
 
 If the page shows the login screen but sign-in fails:
 
-3. **The repository is private and the token lacks `Contents: Read and write`.**
+3. **"Sign In with GitHub" opens a page saying `Not Found`.** This is expected
+   with no `base_url`, and it is not a bug in your setup. Sveltia has no OAuth
+   broker of its own, so it falls back to **Netlify's**:
+
+   ```
+   https://api.netlify.com/auth?provider=github&site_id=hostscope-2et.pages.dev
+   ```
+
+   Netlify has no site by that name, so it returns `Not Found`. A static site
+   cannot complete GitHub's OAuth flow on its own — it would have to hold the
+   client secret. **Either** use the token button, **or** deploy a broker (see
+   below). Do not try to "fix" this by editing the GitHub OAuth app.
+
+   - **Immediate:** click **Sign In Using Access Token** instead and paste a
+     fine-grained PAT with `Contents: Read and write` on this repository. No
+     infrastructure, works today. Correct for a solo operator or a small
+     trusted team. The token is stored in the browser's local storage.
+   - **Proper fix:** deploy the `sveltia-cms-auth` Worker so the GitHub button
+     works — needed when non-technical editors must log in. See
+     [Option B](#option-b--github-oauth-for-non-technical-editors) above.
+
+4. **The repository is private and the token lacks `Contents: Read and write`.**
    A fine-grained token defaults to read-only on public repos and no access at
    all on private ones.
-4. **Neither auth method is configured.** With no `base_url`, only token sign-in
-   works — the hosted OAuth flow needs a broker.
 
 The Sveltia bundle is **vendored** into `public/admin/`, so an ad blocker or a
 CDN outage can no longer break the CMS.
@@ -155,17 +201,27 @@ CDN outage can no longer break the CMS.
 
 ## The live site is behind `main`
 
-**Symptom.** You push, the push succeeds, but the deployed site keeps serving an
-old build. Confirm it before touching anything — fetch a value that changed:
+**Rule out caching first — it is the likeliest explanation and the easiest to
+get wrong.** Cloudflare serves from its edge cache, and any tool you use to
+fetch the page may cache too (some fetch helpers hold a response for 15
+minutes). On 2026-09-17 this section was written after diagnosing a "stale
+deployment" that was in fact a cached read: the site had been current the whole
+time.
+
+**Always append a unique query string when checking:**
 
 ```bash
-curl -s https://hostscope-2et.pages.dev/admin/config.yml | grep -m1 repo:
+curl -s "https://hostscope-2et.pages.dev/admin/config.yml?nocache=$RANDOM" | grep -m1 repo:
 ```
 
-If that prints `repo: your-github-user/hostscope`, the deployment predates the
-commit that fixed it and nothing you push is reaching production.
+A changed query string is a different cache key, so it reaches the current
+deployment. Without it you can read a build from hours ago and conclude the
+pipeline is broken. Note that `/admin/*` is set to `no-cache, must-revalidate`
+in `public/_headers` — but that only applies once the deployment carrying
+`_headers` is already live, so it cannot help you detect a stale deploy.
 
-**Check these in order.** The first one that looks wrong is your cause.
+If the cache-busted fetch still shows an old value, *then* work through the
+list below. The first thing that looks wrong is your cause.
 
 1. **Deployments tab — is a new deployment appearing at all?**
    *Workers & Pages → your project → Deployments.*
@@ -211,10 +267,11 @@ deployment* on the newest one, or push an empty commit:
 git commit --allow-empty -m "chore: trigger Pages rebuild" && git push origin main
 ```
 
-**Verify the fix landed** — the placeholder must be gone:
+**Verify the fix landed** — the placeholder must be gone. Cache-bust, or you
+may read the old value and think the rebuild failed:
 
 ```bash
-curl -s https://hostscope-2et.pages.dev/admin/config.yml | grep -m1 repo:
+curl -s "https://hostscope-2et.pages.dev/admin/config.yml?nocache=$RANDOM" | grep -m1 repo:
 # expect: repo: fusifen/hostscope
 ```
 
