@@ -7,6 +7,12 @@ Two traps with the names: the Pages project is `hostscope-2et` while the repo is
 canonical is `hostscope.online`. `hostscope.io` — the value currently in
 `SITE.url` — does not resolve and is still aspirational.
 
+> **Deploying somewhere else?** This document is Cloudflare-specific. For a
+> self-managed Ubuntu server with nginx, see **[DEPLOY-UBUNTU.md](DEPLOY-UBUNTU.md)**.
+> Note that moving hosts does **not** change the CMS authentication story — the
+> "Sign In with GitHub → Not Found" behaviour described below is caused by
+> `backend.base_url`, not by the platform.
+
 If the deployed site is not tracking `main`, see
 [The live site is behind `main`](#the-live-site-is-behind-main).
 
